@@ -48,7 +48,10 @@ DEVICE_ROOT=${COMPANYWRT_DEVICE_ROOT:-}
 if [ "$TEST_MODE" -eq 1 ]; then
 	[ "${COMPANYWRT_PREFLIGHT_TEST_MODE:-}" = 1 ] || { echo '--test-mode requires COMPANYWRT_PREFLIGHT_TEST_MODE=1' >&2; exit 1; }
 	case "$DEVICE_ROOT" in /*) ;; *) echo '--test-mode requires an absolute COMPANYWRT_DEVICE_ROOT' >&2; exit 1 ;; esac
-	[ -d "$DEVICE_ROOT" ] && [ ! -L "$DEVICE_ROOT" ] || { echo 'test device root must be a real directory' >&2; exit 1; }
+	if [ ! -d "$DEVICE_ROOT" ] || [ -L "$DEVICE_ROOT" ]; then
+		echo 'test device root must be a real directory' >&2
+		exit 1
+	fi
 	tmp_real=$(realpath "${TMPDIR:-/tmp}")
 	device_real=$(realpath "$DEVICE_ROOT")
 	case "$device_real" in "$tmp_real"/*) ;; *) echo 'test device root must be below the temporary directory' >&2; exit 1 ;; esac

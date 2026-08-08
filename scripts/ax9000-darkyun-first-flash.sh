@@ -49,7 +49,10 @@ while [ "$#" -gt 0 ]; do
 done
 
 [ "$(id -u)" -eq 0 ] || ota_die 'first-flash gate requires root on the target router'
-[ -n "$MANIFEST" ] && [ -n "$PUBLIC_KEY" ] || { usage >&2; exit 2; }
+if [ -z "$MANIFEST" ] || [ -z "$PUBLIC_KEY" ]; then
+	usage >&2
+	exit 2
+fi
 [ -s "$PUBLIC_KEY" ] || ota_die "public key is missing: $PUBLIC_KEY"
 [ -n "$EXPECTED_VERSION" ] || ota_die '--expected-version is required'
 [ "$CONFIRM_VERSION" = "$EXPECTED_VERSION" ] || ota_die 'version confirmation mismatch'
@@ -68,7 +71,9 @@ case "$WORK_DIR" in *"'"*|*[![:print:]]*) ota_die 'work directory contains unsaf
 if [ -z "$WORK_DIR" ]; then
 	WORK_DIR=$(mktemp -d "${TMPDIR:-/tmp}/companywrt-first-flash.XXXXXX")
 else
-	[ ! -e "$WORK_DIR" ] && [ ! -L "$WORK_DIR" ] || ota_die 'work directory must not already exist'
+	if [ -e "$WORK_DIR" ] || [ -L "$WORK_DIR" ]; then
+		ota_die 'work directory must not already exist'
+	fi
 	mkdir -m 0700 -- "$WORK_DIR" || ota_die 'cannot create work directory'
 fi
 if [ "$TEST_MODE" -eq 0 ]; then

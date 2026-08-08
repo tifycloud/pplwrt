@@ -42,7 +42,10 @@ while [ "$#" -gt 0 ]; do
 	esac
 done
 
-[ -n "$INPUT" ] && [ -n "$CHANNEL" ] || { usage >&2; exit 2; }
+if [ -z "$INPUT" ] || [ -z "$CHANNEL" ]; then
+	usage >&2
+	exit 2
+fi
 case "$CHANNEL" in stable|rc|beta) ;; *) echo 'channel must be stable, rc or beta' >&2; exit 2 ;; esac
 case "$CHANNEL" in
 	rc) printf '%s\n' "$VERSION" | grep -Eq -- '-rc[1-9][0-9]*$' || { echo 'rc channel requires an -rcN VERSION' >&2; exit 1; } ;;
@@ -52,8 +55,14 @@ esac
 case "$INPUT" in /*) ;; *) INPUT="$CALLER_DIR/$INPUT" ;; esac
 if [ -z "$OUTPUT" ]; then OUTPUT="$ROOT/artifacts/$CHANNEL/$VERSION"; fi
 case "$OUTPUT" in /*) ;; *) OUTPUT="$CALLER_DIR/$OUTPUT" ;; esac
-[ -d "$INPUT" ] && [ ! -L "$INPUT" ] || { echo 'unsigned input must be a real directory' >&2; exit 1; }
-[ ! -e "$OUTPUT" ] && [ ! -L "$OUTPUT" ] || { echo "refusing existing output directory: $OUTPUT" >&2; exit 1; }
+if [ ! -d "$INPUT" ] || [ -L "$INPUT" ]; then
+	echo 'unsigned input must be a real directory' >&2
+	exit 1
+fi
+if [ -e "$OUTPUT" ] || [ -L "$OUTPUT" ]; then
+	echo "refusing existing output directory: $OUTPUT" >&2
+	exit 1
+fi
 [ -s "$INPUT/COMPILE-ONLY-NOT-A-RELEASE.txt" ] || { echo 'unsigned compile-only marker is missing' >&2; exit 1; }
 [ -s "$INPUT/SHA256SUMS" ] || { echo 'unsigned bundle checksums are missing' >&2; exit 1; }
 if find "$INPUT" -maxdepth 1 -type f -name 'RELEASE-MANIFEST*' -print -quit | grep -q .; then
@@ -108,14 +117,20 @@ IMAGE=$(find "$INPUT" -maxdepth 1 -type f -name '*-sysupgrade.bin' -print)
 IMAGE_NAME=${IMAGE##*/}
 IMAGE_SHA=$(sha256sum "$IMAGE" | awk '{print $1}')
 IMAGE_SIZE=$(wc -c < "$IMAGE" | tr -d '[:space:]')
-[ "$HARDWARE_VALIDATION" != VERIFIED ] || [ "$IMAGE_SHA" = "$TESTED_FIRMWARE_SHA256" ] || { echo 'stable unsigned image differs from hardware-tested digest' >&2; exit 1; }
+if [ "$HARDWARE_VALIDATION" = VERIFIED ] && [ "$IMAGE_SHA" != "$TESTED_FIRMWARE_SHA256" ]; then
+	echo 'stable unsigned image differs from hardware-tested digest' >&2
+	exit 1
+fi
 grep -qx "image_sha256=$IMAGE_SHA" "$INPUT/FIRMWARE-CONTENT-REPORT.txt" || { echo 'content report is not bound to the unsigned image' >&2; exit 1; }
 grep -qx 'kernel_dtb_layout=PASS' "$INPUT/FIRMWARE-CONTENT-REPORT.txt" || { echo 'kernel DTB inspection did not pass' >&2; exit 1; }
 grep -qx 'partition_variant=darkyun-large-ubi-v1' "$INPUT/FIRMWARE-CONTENT-REPORT.txt" || { echo 'content report partition mismatch' >&2; exit 1; }
 [ "$(wc -l < "$INPUT/PACKAGE-MANIFEST" | tr -d '[:space:]')" -eq "$EXPECTED_PACKAGE_COUNT" ] || { echo 'unsigned package manifest count mismatch' >&2; exit 1; }
 
 HOST_USIGN_ARCHIVE="$INPUT/BUILD-HOST-USIGN.tar.zst"
-[ -f "$HOST_USIGN_ARCHIVE" ] && [ ! -L "$HOST_USIGN_ARCHIVE" ] || { echo 'verified Buildroot host usign archive is missing' >&2; exit 1; }
+if [ ! -f "$HOST_USIGN_ARCHIVE" ] || [ -L "$HOST_USIGN_ARCHIVE" ]; then
+	echo 'verified Buildroot host usign archive is missing' >&2
+	exit 1
+fi
 HOST_TOOL_DIR=$(mktemp -d "${TMPDIR:-/tmp}/companywrt-usign-tool.XXXXXX")
 OUTPUT_WORK=""
 cleanup() {
@@ -127,7 +142,10 @@ tar tf "$HOST_USIGN_ARCHIVE" > "$HOST_TOOL_DIR/archive.list" || { echo 'cannot l
 awk '/^\// || /(^|\/)\.\.($|\/)/ { exit 1 }' "$HOST_TOOL_DIR/archive.list" || { echo 'unsafe path in host usign archive' >&2; exit 1; }
 tar --zstd -xf "$HOST_USIGN_ARCHIVE" -C "$HOST_TOOL_DIR"
 USIGN_BIN="$HOST_TOOL_DIR/bin/usign"
-[ -f "$USIGN_BIN" ] && [ ! -L "$USIGN_BIN" ] && [ -x "$USIGN_BIN" ] || { echo 'verified Buildroot host usign executable is missing' >&2; exit 1; }
+if [ ! -f "$USIGN_BIN" ] || [ -L "$USIGN_BIN" ] || [ ! -x "$USIGN_BIN" ]; then
+	echo 'verified Buildroot host usign executable is missing' >&2
+	exit 1
+fi
 ROOT_REAL=$(realpath "$ROOT")
 validate_secret() {
 	secret=$1
