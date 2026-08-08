@@ -22,9 +22,9 @@ as their primary manifest signer.
 
 The current private key exists only as the `COMPANYWRT_USIGN_CURRENT_SECRET_KEY`
 secret on the protected GitHub environment `firmware-signing`. The previous
-private key remains temporarily available as the repository secret
-`COMPANYWRT_USIGN_SECRET_KEY` only until the immutable RC2 transition release
-and both signatures have been verified; it is deleted immediately afterward.
+repository secret `COMPANYWRT_USIGN_SECRET_KEY` was deleted after the immutable
+RC2 transition release, both signatures, remote asset digests and attestation
+were independently verified.
 Neither private key may enter git, firmware, artifacts, logs, or release assets.
 
 RC1 remains a prerelease with its historical old-key-signed assets intact for

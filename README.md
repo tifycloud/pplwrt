@@ -3,7 +3,7 @@
 CompanyWrt 是基于官方 OpenWrt **25.12.5**、`qualcommax/ipq807x` 的可审计企业固件。
 本仓库当前唯一可构建目标是为用户实机验证的暗云 Boot 单 UBI 大分区新建的
 `xiaomi_ax9000_darkyun` profile；它不是官方标准 `xiaomi_ax9000` 镜像。当前版本是
-**25.12.5-company.2-rc2**：它是 release candidate，**不是生产稳定版**。
+**25.12.5-company.2-rc3**：它是 release candidate，**不是生产稳定版**。
 在真实 AX9000 完成刷写/救援/断电/双 WAN/无线/安全门禁前只能用于实验室。
 
 > 官方标准 AX9000 镜像和历史 `company.1/company.2-rc1` 都与本机单 UBI 布局不兼容，
@@ -17,17 +17,16 @@ CompanyWrt 是基于官方 OpenWrt **25.12.5**、`qualcommax/ipq807x` 的可审�
 `RELEASE-MANIFEST`；固件内只嵌入 [当前公开验证密钥](keys/companywrt-release.pub)。
 私钥不得进入 git、overlay、日志或 artifact。
 
-RC2 是显式 usign 轮换过渡：旧 RC1 key 对主 manifest 签名，保证 RC1 可验证升级；
-新 key 对同一 manifest 共签并进入 RC2 rootfs，后续版本改用新 key 主签。新私钥只存在
-受审批和冷却保护的 `firmware-signing` environment secret；详见 [密钥说明](keys/README.md)。
+RC2 已完成显式 usign 轮换过渡；RC3 使用固件内当前 key 对 manifest 主签，不再读取或
+使用旧 RC1 私钥。当前私钥只存在受审批和冷却保护的 `firmware-signing` environment
+secret；详见 [密钥说明](keys/README.md)。
 
 ```sh
 ./scripts/build-in-container.sh --profile xiaomi_ax9000_darkyun --channel rc --compile-only
-export USIGN_SECRET_KEY_FILE=/secure/outside/repository/companywrt-usign-previous.key
-export USIGN_CURRENT_SECRET_KEY_FILE=/secure/outside/repository/companywrt-usign-current.key
+export USIGN_SECRET_KEY_FILE=/secure/outside/repository/companywrt-usign-current.key
 ./scripts/sign-release-bundle.sh \
-  --input artifacts/preflight/25.12.5-company.2-rc2 --channel rc
-cd artifacts/rc/25.12.5-company.2-rc2
+  --input artifacts/preflight/25.12.5-company.2-rc3 --channel rc
+cd artifacts/rc/25.12.5-company.2-rc3
 sha256sum -c SHA256SUMS
 ```
 
@@ -37,7 +36,7 @@ sha256sum -c SHA256SUMS
 `origin/main` HEAD 精确相等；完整 Buildroot 在无 secret job 中完成并封存 checksum，
 `firmware-signing` job 只验包和签名、不运行编译器或网络下载。attestation 与唯一
 contents-write publish job 继续分离。RC tag 自动发布 immutable prerelease。正式 stable 没有
-精确真机 evidence 文件就会失败，RC2 没有真机证据，不能当 stable。
+精确真机 evidence 文件就会失败，RC3 没有真机证据，不能当 stable。
 
 ## 默认边界
 

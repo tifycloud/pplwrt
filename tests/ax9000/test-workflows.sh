@@ -66,6 +66,6 @@ grep -q '.immutable == true' "$RELEASE"
 grep -q 'published asset digest mismatch' "$RELEASE"
 grep -q "gh release verify \"\\\$GITHUB_REF_NAME\"" "$RELEASE"
 grep -q 'gh release verify-asset' "$RELEASE"
-grep -q "test \"\$(cat VERSION)\" = '25.12.5-company.2-rc2'" "$CI"
+grep -Fq "grep -Eq '^25\\.12\\.5-company\\.[0-9]+-(rc|beta)[1-9][0-9]*$' VERSION" "$CI"
 
 echo 'workflow exact-main annotated-tag authorization, protected signing, stable evidence and immutable verification: ok'

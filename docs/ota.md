@@ -10,7 +10,7 @@ MIT LICENSE、内容报告和 GitHub artifact attestation。
 
 ```text
 FORMAT=companywrt-darkyun-release-v1
-VERSION=25.12.5-company.2-rc2
+VERSION=25.12.5-company.2-rc3
 OPENWRT_RELEASE=25.12.5
 PROFILE=xiaomi_ax9000_darkyun
 BOARD=xiaomi,ax9000-darkyun
@@ -19,7 +19,7 @@ MIBIB_SHA256=2d79c1b15b8946af733dba5fff5e33bf3ba18863ed734710bd2a5e48fc469c11
 APPSBL_SHA256=80908e502add45ee6aa7ad83aa16ec2c3c8bf27b572ac0f9c3fe404b94fc0007
 MIGRATION_BOARD=xiaomi,ax9000
 CHANNEL=rc
-TAG=v25.12.5-company.2-rc2
+TAG=v25.12.5-company.2-rc3
 SOURCE_COMMIT=<40-lowercase-hex>
 IMAGE=<safe-sysupgrade-basename>
 SHA256=<64-lowercase-hex>
@@ -46,16 +46,17 @@ RC/beta 不允许伪造这些 stable 字段，其 BUILD-METADATA 与内容报告
 远程 manifest、signature 和 image 都只允许 HTTPS，curl redirect 也限制为 HTTPS。
 签名使用固件内 `/etc/companywrt/keys/release.pub` 的 usign key；manifest 签名把
 version/profile/board/partition/MIBIB/APPSBL/channel/tag/commit/image/size/SHA/URL 绑定为一个整体。
-RC2 是轮换例外：`RELEASE-MANIFEST.sig` 仍由 RC1 旧 key 主签，
+RC2 是已完成的轮换例外：`RELEASE-MANIFEST.sig` 仍由 RC1 旧 key 主签，
 `RELEASE-MANIFEST.next.sig` 由新 key 对同一字节共签，RC2 rootfs 只嵌入新 key。这样
-RC1 无需信任锚 override 即可验证过渡，RC2 之后的版本再由新 key 主签。
+RC1 无需信任锚 override 即可验证过渡；当前 RC3 由新 key 对
+`RELEASE-MANIFEST.sig` 主签，不再生成 `.next.sig`。
 
 ## 下载检查（不改变路由器状态）
 
 ```sh
 /usr/share/company/ota-check \
-  --manifest https://github.com/tifycloud/pplwrt/releases/download/v25.12.5-company.2-rc2/RELEASE-MANIFEST \
-  --version 25.12.5-company.2-rc2 --channel rc
+  --manifest https://github.com/tifycloud/pplwrt/releases/download/v25.12.5-company.2-rc3/RELEASE-MANIFEST \
+  --version 25.12.5-company.2-rc3 --channel rc
 ```
 
 它必须实际下载 signature 和完整 image，然后按顺序验证 schema、key fingerprint、
@@ -71,9 +72,9 @@ usign signature、实际字节数和 SHA256。短 SHA、仅打印 manifest SHA�
   --manifest /tmp/bundle/RELEASE-MANIFEST \
   --signature /tmp/bundle/RELEASE-MANIFEST.sig \
   --image /tmp/bundle/<sysupgrade.bin> \
-  --expected-version 25.12.5-company.2-rc2 \
+  --expected-version 25.12.5-company.2-rc3 \
   --expected-channel rc \
-  --confirm-version 25.12.5-company.2-rc2 \
+  --confirm-version 25.12.5-company.2-rc3 \
   --confirm-sha256 <64HEX_FROM_SEPARATE_ADMIN_REVIEW>
 ```
 
@@ -97,7 +98,7 @@ GitHub attestation 是额外 provenance，不替代 usign、大小/SHA、board �
 ## 密钥和 CI
 
 公钥可提交；新私钥只存在受控密钥库和 GitHub `firmware-signing` environment secret
-`COMPANYWRT_USIGN_CURRENT_SECRET_KEY`。RC2 发布前，旧 repository secret 仅用于生成
-兼容 RC1 的过渡主签；RC2 双签、资产 digest、attestation 和 OTA E2E 全部核验后删除。
+`COMPANYWRT_USIGN_CURRENT_SECRET_KEY`。旧 repository secret 只曾用于生成兼容 RC1 的
+RC2 过渡主签；RC2 双签、资产 digest、attestation 和 OTA E2E 核验后已经删除。
 tag/stable 构建缺 secret 或 fingerprint 不符即失败。环境还要求审批、wait timer 和
 仅 `main` branch/`v*` tag deployment policy；tag ruleset 禁止删除/移动已创建的 release tag。
