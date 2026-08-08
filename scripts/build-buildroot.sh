@@ -14,10 +14,7 @@ FORCE_SOURCE=0
 PRINT_OUTPUT=0
 COMPILE_ONLY=0
 JOBS=${COMPANYWRT_BUILD_JOBS:-2}
-SIGNING_KEY=${USIGN_SECRET_KEY_FILE:-}
-CURRENT_SIGNING_KEY=${USIGN_CURRENT_SECRET_KEY_FILE:-}
 SOURCE_COMMIT=${COMPANYWRT_SOURCE_COMMIT:-}
-RELEASE_BASE_URL=""
 PRODUCTION_GATE=""
 VERSION=$(sed -n '1p' "$ROOT/VERSION")
 HARDWARE_VALIDATION=NOT_PERFORMED_RC_ONLY
@@ -33,25 +30,18 @@ Usage: scripts/build-buildroot.sh [options]
   --channel stable|rc|beta
   --build-root DIR
   --output DIR
-  --signing-key FILE        manifest usign private key outside the repository
-  --current-signing-key FILE
-                            current key used for a declared rotation transition
   --production-gate FILE    exact stable hardware evidence file
   --source-commit 40HEX
-  --release-base-url HTTPS_URL
   --jobs N                   parallel compiler jobs (default 2)
   --force-source             discard only the generated pinned source cache
   --compile-only             unsigned local preflight; never a release bundle
   --print-output            print resolved versioned output and exit
 
-Default output is artifacts/<channel>/<VERSION>/. Every full build requires a
-usign private key matching the manifest trust key. A declared rotation build
-also requires the current private key while embedding only the current public
-key. Private keys are never copied to the rootfs or artifacts. Stable builds
-require the exact production-gates/<VERSION>.env file. This script clones the
-pinned official OpenWrt source, applies only the reviewed Darkyun device patch,
-and performs a full Buildroot compilation. Linux x86_64 is required; Apple
-Silicon must use the container wrapper or CI.
+This compiler accepts only --compile-only and never accepts or reads a release
+private key. The resulting unsigned bundle is signed later by
+sign-release-bundle.sh in the isolated release environment. Stable builds
+require the exact production-gates/<VERSION>.env file. Linux x86_64 is required;
+Apple Silicon must use the container wrapper or CI.
 EOF
 }
 
@@ -61,11 +51,8 @@ while [ "$#" -gt 0 ]; do
 		--channel) [ "$#" -ge 2 ] || { usage >&2; exit 2; }; CHANNEL=$2; shift 2 ;;
 		--build-root) [ "$#" -ge 2 ] || { usage >&2; exit 2; }; BUILD_ROOT=$2; shift 2 ;;
 		--output) [ "$#" -ge 2 ] || { usage >&2; exit 2; }; OUTPUT=$2; shift 2 ;;
-		--signing-key) [ "$#" -ge 2 ] || { usage >&2; exit 2; }; SIGNING_KEY=$2; shift 2 ;;
-		--current-signing-key) [ "$#" -ge 2 ] || { usage >&2; exit 2; }; CURRENT_SIGNING_KEY=$2; shift 2 ;;
 		--production-gate) [ "$#" -ge 2 ] || { usage >&2; exit 2; }; PRODUCTION_GATE=$2; shift 2 ;;
 		--source-commit) [ "$#" -ge 2 ] || { usage >&2; exit 2; }; SOURCE_COMMIT=$2; shift 2 ;;
-		--release-base-url) [ "$#" -ge 2 ] || { usage >&2; exit 2; }; RELEASE_BASE_URL=$2; shift 2 ;;
 		--jobs) [ "$#" -ge 2 ] || { usage >&2; exit 2; }; JOBS=$2; shift 2 ;;
 		--force-source) FORCE_SOURCE=1; shift ;;
 		--compile-only) COMPILE_ONLY=1; shift ;;
@@ -85,6 +72,7 @@ case "$CHANNEL" in
 	beta) printf '%s\n' "$VERSION" | grep -Eq -- '-beta[1-9][0-9]*$' || { echo 'beta builds require a -betaN VERSION' >&2; exit 1; } ;;
 	stable) printf '%s\n' "$VERSION" | grep -Eq -- '-(rc|beta)[1-9][0-9]*$' && { echo 'stable builds cannot use prerelease VERSION values' >&2; exit 1; } ;;
 esac
+[ "$COMPILE_ONLY" -eq 1 ] || { echo 'Buildroot is compile-only; pass --compile-only and sign the verified bundle separately' >&2; exit 1; }
 
 gate_value() {
 	key=$1
@@ -112,10 +100,8 @@ fi
 
 [ "$PROFILE" = xiaomi_ax9000_darkyun ] || { echo "unsupported profile: $PROFILE" >&2; exit 2; }
 printf '%s\n' "$JOBS" | grep -Eq '^[1-9][0-9]?$' || { echo '--jobs must be an integer from 1 to 99' >&2; exit 2; }
-if [ -z "$OUTPUT" ] && [ "$COMPILE_ONLY" -eq 1 ]; then
+if [ -z "$OUTPUT" ]; then
 	OUTPUT="$ROOT/artifacts/preflight/$VERSION"
-elif [ -z "$OUTPUT" ]; then
-	OUTPUT="$ROOT/artifacts/$CHANNEL/$VERSION"
 fi
 case "$BUILD_ROOT" in /*) ;; *) BUILD_ROOT="$CALLER_DIR/$BUILD_ROOT" ;; esac
 case "$OUTPUT" in /*) ;; *) OUTPUT="$CALLER_DIR/$OUTPUT" ;; esac
@@ -135,12 +121,6 @@ elif [ "${COMPANYWRT_SOURCE_VERIFIED:-}" != 1 ]; then
 	echo 'source provenance cannot be verified outside git; use the clean-worktree container wrapper' >&2
 	exit 1
 fi
-if [ -z "$RELEASE_BASE_URL" ]; then
-	RELEASE_BASE_URL="https://github.com/tifycloud/pplwrt/releases/download/v$VERSION"
-fi
-case "$RELEASE_BASE_URL" in https://*) ;; *) echo 'release base URL must use HTTPS' >&2; exit 1 ;; esac
-case "$RELEASE_BASE_URL" in *[!A-Za-z0-9._~:/%-]*) echo 'release base URL contains unsupported characters' >&2; exit 1 ;; esac
-
 ROTATION_FILE="$ROOT/keys/ROTATION.env"
 [ -s "$ROTATION_FILE" ] || { echo 'usign rotation declaration is missing' >&2; exit 1; }
 rotation_value() {
@@ -165,32 +145,6 @@ if [ ! -s "$PREVIOUS_PUBLIC_KEY" ] || [ ! -s "$EMBEDDED_PUBLIC_KEY" ]; then
 	exit 1
 fi
 
-KEY_TRANSITION=0
-MANIFEST_PUBLIC_KEY=$EMBEDDED_PUBLIC_KEY
-if [ "$VERSION" = "$TRANSITION_VERSION" ]; then
-	KEY_TRANSITION=1
-	MANIFEST_PUBLIC_KEY=$PREVIOUS_PUBLIC_KEY
-fi
-
-root_real=$(realpath "$ROOT")
-validate_secret_path() {
-	secret_path=$1
-	description=$2
-	[ -s "$secret_path" ] || { echo "a non-empty $description is required outside the repository" >&2; exit 1; }
-	secret_real=$(realpath "$secret_path")
-	case "$secret_real" in "$root_real"/*) echo "refusing $description stored inside the repository" >&2; exit 1 ;; esac
-}
-if [ "$COMPILE_ONLY" -eq 1 ]; then
-	[ -z "$SIGNING_KEY" ] && [ -z "$CURRENT_SIGNING_KEY" ] || { echo '--compile-only refuses private signing keys' >&2; exit 1; }
-else
-	validate_secret_path "$SIGNING_KEY" 'manifest usign private key (--signing-key or USIGN_SECRET_KEY_FILE)'
-	if [ "$KEY_TRANSITION" -eq 1 ]; then
-		validate_secret_path "$CURRENT_SIGNING_KEY" 'current rotation usign private key (--current-signing-key or USIGN_CURRENT_SECRET_KEY_FILE)'
-	elif [ -n "$CURRENT_SIGNING_KEY" ]; then
-		echo 'current rotation signing key was supplied outside the declared transition version' >&2
-		exit 1
-	fi
-fi
 awk -F'|' -v expected="$VERSION" '
 	/^[[:space:]]*#/ || /^[[:space:]]*$/ { next }
 	{ version=$2; gsub(/^[[:space:]]+|[[:space:]]+$/, "", version); if (version != expected) exit 1 }
@@ -217,9 +171,6 @@ OPENWRT_COMMIT=$(json_value '.openwrt.commit')
 OPENWRT_TAG=$(json_value '.openwrt.tag')
 OPENWRT_SOURCE_URL=$(json_value '.openwrt.source')
 PARTITION_VARIANT=$(json_value '.partition_variant')
-MIGRATION_BOARD=$(json_value '.migration_board')
-MIBIB_SHA256=$(json_value '.mibib.sha256')
-APPSBL_SHA256=$(json_value '.appsbl.sha256')
 [ "$(json_value '.profile')" = "$PROFILE" ] || { echo 'profile metadata mismatch' >&2; exit 1; }
 [ "$(json_value '.board')" = "$BOARD" ] || { echo 'board metadata mismatch' >&2; exit 1; }
 printf '%s\n' "$OPENWRT_COMMIT" | grep -Eq '^[0-9a-f]{40}$' || { echo 'pinned OpenWrt commit is invalid' >&2; exit 1; }
@@ -371,21 +322,9 @@ make -C "$SOURCE_DIR" -j "$JOBS"
 
 USIGN_BIN="$SOURCE_DIR/staging_dir/host/bin/usign"
 [ -x "$USIGN_BIN" ] || { echo 'pinned Buildroot host usign is missing' >&2; exit 1; }
-MANIFEST_PUBLIC_KEY_ID=$("$USIGN_BIN" -F -p "$MANIFEST_PUBLIC_KEY")
 EMBEDDED_PUBLIC_KEY_ID=$("$USIGN_BIN" -F -p "$EMBEDDED_PUBLIC_KEY")
 [ "$EMBEDDED_PUBLIC_KEY_ID" = "$DECLARED_CURRENT_KEY_ID" ] || { echo 'current public key ID does not match ROTATION.env' >&2; exit 1; }
 [ "$("$USIGN_BIN" -F -p "$PREVIOUS_PUBLIC_KEY")" = "$DECLARED_PREVIOUS_KEY_ID" ] || { echo 'previous public key ID does not match ROTATION.env' >&2; exit 1; }
-if [ "$COMPILE_ONLY" -eq 0 ]; then
-	SECRET_KEY_ID=$("$USIGN_BIN" -F -s "$SIGNING_KEY")
-	[ "$MANIFEST_PUBLIC_KEY_ID" = "$SECRET_KEY_ID" ] || { echo 'manifest usign private key does not match its committed public key' >&2; exit 1; }
-	if [ "$KEY_TRANSITION" -eq 1 ]; then
-		CURRENT_SECRET_KEY_ID=$("$USIGN_BIN" -F -s "$CURRENT_SIGNING_KEY")
-		[ "$CURRENT_SECRET_KEY_ID" = "$EMBEDDED_PUBLIC_KEY_ID" ] || { echo 'current rotation private key does not match the embedded public key' >&2; exit 1; }
-		[ "$MANIFEST_PUBLIC_KEY_ID" = "$DECLARED_PREVIOUS_KEY_ID" ] || { echo 'transition manifest must be signed by the declared previous key' >&2; exit 1; }
-	else
-		[ "$MANIFEST_PUBLIC_KEY_ID" = "$EMBEDDED_PUBLIC_KEY_ID" ] || { echo 'non-transition manifest must use the embedded current public key' >&2; exit 1; }
-	fi
-fi
 
 [ -s "$TARGET_BIN/profiles.json" ] || { echo 'Buildroot profiles.json was not produced' >&2; exit 1; }
 cp "$TARGET_BIN/profiles.json" "$OUTPUT_WORK/profiles.json"
@@ -433,7 +372,6 @@ cp "$SOURCE_DIR/.config" "$OUTPUT_WORK/OPENWRT-CONFIG"
 	done
 } > "$OUTPUT_WORK/OPENWRT-SOURCE-PROVENANCE"
 IMAGE_SHA=$(sha256sum "$IMAGE" | awk '{print $1}')
-IMAGE_SIZE=$(wc -c < "$IMAGE" | tr -d '[:space:]')
 if [ "$HARDWARE_VALIDATION" = VERIFIED ]; then
 	[ "$IMAGE_SHA" = "$TESTED_FIRMWARE_SHA256" ] || {
 		echo 'stable blocked: built firmware does not match the exact hardware-tested digest' >&2
@@ -478,91 +416,19 @@ DTC="$SOURCE_DIR/staging_dir/host/bin/dtc" \
 	--serial-evidence-id "$SERIAL_EVIDENCE_ID" \
 	--tested-firmware-sha256 "$TESTED_FIRMWARE_SHA256"
 
-if [ "$COMPILE_ONLY" -eq 1 ]; then
-	tar --zstd -cf "$OUTPUT_WORK/BUILD-HOST-USIGN.tar.zst" \
-		-C "$SOURCE_DIR/staging_dir/host" bin/usign bin/.usign.bin lib
-	{
-		printf 'UNSIGNED DEVELOPMENT PREFLIGHT ONLY\n'
-		printf 'This directory is not a release bundle and must not be flashed.\n'
-	} > "$OUTPUT_WORK/COMPILE-ONLY-NOT-A-RELEASE.txt"
-	{
-		printf 'version=%s\nchannel=%s\nprofile=%s\nboard=%s\n' "$VERSION" "$CHANNEL" "$PROFILE" "$BOARD"
-		printf 'partition_variant=%s\nopenwrt_release=%s\nopenwrt_commit=%s\n' "$PARTITION_VARIANT" "$RELEASE" "$OPENWRT_COMMIT"
-		printf 'source_commit=%s\ndevice_patch_sha256=%s\nbuild_system=full-openwrt-buildroot\n' "$SOURCE_COMMIT" "$PATCH_SHA256"
-		printf 'release_signing=NOT_PERFORMED_COMPILE_ONLY\nhardware_validation=NOT_PERFORMED_RC_ONLY\n'
-	} > "$OUTPUT_WORK/BUILD-METADATA"
-	(
-		cd "$OUTPUT_WORK"
-		for artifact in *; do
-			[ -f "$artifact" ] || continue
-			[ "$artifact" = SHA256SUMS ] && continue
-			sha256sum "$artifact"
-		done
-	) > "$OUTPUT_WORK/SHA256SUMS"
-	(cd "$OUTPUT_WORK" && sha256sum -c SHA256SUMS)
-	mv "$OUTPUT_WORK" "$OUTPUT"
-	printf 'COMPILE_ONLY_OUTPUT=%s\nIMAGE=%s\nSHA256=%s\n' "$OUTPUT" "$OUTPUT/$IMAGE_NAME" "$IMAGE_SHA"
-	exit 0
-fi
-
-SIGNATURE_NAME='RELEASE-MANIFEST.sig'
+tar --zstd -cf "$OUTPUT_WORK/BUILD-HOST-USIGN.tar.zst" \
+	-C "$SOURCE_DIR/staging_dir/host" bin/usign bin/.usign.bin lib
 {
-	if [ "$HARDWARE_VALIDATION" = VERIFIED ]; then
-		printf 'FORMAT=companywrt-darkyun-release-v2\n'
-	else
-		printf 'FORMAT=companywrt-darkyun-release-v1\n'
-	fi
-	printf 'VERSION=%s\n' "$VERSION"
-	printf 'OPENWRT_RELEASE=%s\n' "$RELEASE"
-	printf 'PROFILE=%s\n' "$PROFILE"
-	printf 'BOARD=%s\n' "$BOARD"
-	printf 'PARTITION_VARIANT=%s\n' "$PARTITION_VARIANT"
-	printf 'MIBIB_SHA256=%s\n' "$MIBIB_SHA256"
-	printf 'APPSBL_SHA256=%s\n' "$APPSBL_SHA256"
-	printf 'MIGRATION_BOARD=%s\n' "$MIGRATION_BOARD"
-	printf 'CHANNEL=%s\n' "$CHANNEL"
-	printf 'TAG=v%s\n' "$VERSION"
-	printf 'SOURCE_COMMIT=%s\n' "$SOURCE_COMMIT"
-	printf 'IMAGE=%s\n' "$IMAGE_NAME"
-	printf 'SHA256=%s\n' "$IMAGE_SHA"
-	printf 'SIZE=%s\n' "$IMAGE_SIZE"
-	printf 'URL=%s/%s\n' "$RELEASE_BASE_URL" "$IMAGE_NAME"
-	printf 'SIGNATURE=%s\n' "$SIGNATURE_NAME"
-	printf 'SIGNATURE_URL=%s/%s\n' "$RELEASE_BASE_URL" "$SIGNATURE_NAME"
-	printf 'USIGN_KEY_ID=%s\n' "$MANIFEST_PUBLIC_KEY_ID"
-	if [ "$HARDWARE_VALIDATION" = VERIFIED ]; then
-		printf 'HARDWARE_VALIDATION=%s\n' "$HARDWARE_VALIDATION"
-		printf 'PRODUCTION_GATE_SHA256=%s\n' "$PRODUCTION_GATE_SHA256"
-		printf 'HARDWARE_EVIDENCE_ID=%s\n' "$HARDWARE_EVIDENCE_ID"
-		printf 'SERIAL_EVIDENCE_ID=%s\n' "$SERIAL_EVIDENCE_ID"
-		printf 'TESTED_FIRMWARE_SHA256=%s\n' "$TESTED_FIRMWARE_SHA256"
-	fi
-} > "$OUTPUT_WORK/RELEASE-MANIFEST"
-"$USIGN_BIN" -S -m "$OUTPUT_WORK/RELEASE-MANIFEST" -s "$SIGNING_KEY" -x "$OUTPUT_WORK/$SIGNATURE_NAME"
-"$USIGN_BIN" -q -V -p "$MANIFEST_PUBLIC_KEY" -m "$OUTPUT_WORK/RELEASE-MANIFEST" -x "$OUTPUT_WORK/$SIGNATURE_NAME"
-if [ "$KEY_TRANSITION" -eq 1 ]; then
-	NEXT_SIGNATURE_NAME='RELEASE-MANIFEST.next.sig'
-	"$USIGN_BIN" -S -m "$OUTPUT_WORK/RELEASE-MANIFEST" -s "$CURRENT_SIGNING_KEY" -x "$OUTPUT_WORK/$NEXT_SIGNATURE_NAME"
-	"$USIGN_BIN" -q -V -p "$EMBEDDED_PUBLIC_KEY" -m "$OUTPUT_WORK/RELEASE-MANIFEST" -x "$OUTPUT_WORK/$NEXT_SIGNATURE_NAME"
-fi
-
+	printf 'UNSIGNED DEVELOPMENT PREFLIGHT ONLY\n'
+	printf 'This directory is not a release bundle and must not be flashed.\n'
+} > "$OUTPUT_WORK/COMPILE-ONLY-NOT-A-RELEASE.txt"
 {
 	printf 'version=%s\nchannel=%s\nprofile=%s\nboard=%s\n' "$VERSION" "$CHANNEL" "$PROFILE" "$BOARD"
-	printf 'partition_variant=%s\nmibib_sha256=%s\nappsbl_sha256=%s\n' "$PARTITION_VARIANT" "$MIBIB_SHA256" "$APPSBL_SHA256"
-	printf 'openwrt_release=%s\nopenwrt_commit=%s\nsource_commit=%s\n' "$RELEASE" "$OPENWRT_COMMIT" "$SOURCE_COMMIT"
-	printf 'device_patch_sha256=%s\nbuild_system=full-openwrt-buildroot\n' "$PATCH_SHA256"
-	printf 'manifest_usign_key_id=%s\nembedded_usign_key_id=%s\n' "$MANIFEST_PUBLIC_KEY_ID" "$EMBEDDED_PUBLIC_KEY_ID"
-	if [ "$KEY_TRANSITION" -eq 1 ]; then
-		printf 'key_rotation=PREVIOUS_PRIMARY_CURRENT_COSIGN_EMBED_CURRENT\n'
-	else
-		printf 'key_rotation=NONE\n'
-	fi
-	printf 'custom_components=overlay-not-apk\n'
-	printf 'hardware_validation=%s\n' "$HARDWARE_VALIDATION"
-	printf 'production_gate_sha256=%s\n' "$PRODUCTION_GATE_SHA256"
-	printf 'hardware_evidence_id=%s\n' "$HARDWARE_EVIDENCE_ID"
-	printf 'serial_evidence_id=%s\n' "$SERIAL_EVIDENCE_ID"
-	printf 'tested_firmware_sha256=%s\n' "$TESTED_FIRMWARE_SHA256"
+	printf 'partition_variant=%s\nopenwrt_release=%s\nopenwrt_commit=%s\n' "$PARTITION_VARIANT" "$RELEASE" "$OPENWRT_COMMIT"
+	printf 'source_commit=%s\ndevice_patch_sha256=%s\nbuild_system=full-openwrt-buildroot\n' "$SOURCE_COMMIT" "$PATCH_SHA256"
+	printf 'release_signing=NOT_PERFORMED_COMPILE_ONLY\nhardware_validation=%s\n' "$HARDWARE_VALIDATION"
+	printf 'production_gate_sha256=%s\nhardware_evidence_id=%s\nserial_evidence_id=%s\ntested_firmware_sha256=%s\n' \
+		"$PRODUCTION_GATE_SHA256" "$HARDWARE_EVIDENCE_ID" "$SERIAL_EVIDENCE_ID" "$TESTED_FIRMWARE_SHA256"
 } > "$OUTPUT_WORK/BUILD-METADATA"
 
 (
@@ -579,6 +445,4 @@ fi
 )
 
 mv "$OUTPUT_WORK" "$OUTPUT"
-printf 'OUTPUT=%s\n' "$OUTPUT"
-printf 'IMAGE=%s\n' "$OUTPUT/$IMAGE_NAME"
-printf 'SHA256=%s\nSIZE=%s\nMANIFEST_USIGN_KEY_ID=%s\nEMBEDDED_USIGN_KEY_ID=%s\n' "$IMAGE_SHA" "$IMAGE_SIZE" "$MANIFEST_PUBLIC_KEY_ID" "$EMBEDDED_PUBLIC_KEY_ID"
+printf 'COMPILE_ONLY_OUTPUT=%s\nIMAGE=%s\nSHA256=%s\n' "$OUTPUT" "$OUTPUT/$IMAGE_NAME" "$IMAGE_SHA"

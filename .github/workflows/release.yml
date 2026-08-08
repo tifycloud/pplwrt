@@ -97,7 +97,7 @@ jobs:
             }
             ./scripts/verify-production-gate.sh "$evidence" "$version"
           fi
-          ./scripts/build-buildroot.sh --channel "$channel" --print-output >/dev/null
+          ./scripts/build-buildroot.sh --channel "$channel" --compile-only --print-output >/dev/null
           {
             echo "version=$version"
             echo "channel=$channel"

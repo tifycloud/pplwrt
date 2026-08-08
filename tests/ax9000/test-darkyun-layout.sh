@@ -45,9 +45,10 @@ grep -Eq '^\+[[:space:]]+KERNEL_IN_UBI := 1$' "$PATCH_FILE"
 grep -Fq 'CI_UBIPART="rootfs"' "$PATCH_FILE"
 grep -Fq "nand_do_upgrade \"\$1\"" "$PATCH_FILE"
 
-grep -Fq "printf 'BOARD=%s\\n' \"\$BOARD\"" "$ROOT/scripts/build-buildroot.sh"
-grep -Fq "printf 'PARTITION_VARIANT=%s\\n' \"\$PARTITION_VARIANT\"" "$ROOT/scripts/build-buildroot.sh"
-grep -Fq "printf 'MIBIB_SHA256=%s\\n' \"\$MIBIB_SHA256\"" "$ROOT/scripts/build-buildroot.sh"
-grep -Fq "printf 'APPSBL_SHA256=%s\\n' \"\$APPSBL_SHA256\"" "$ROOT/scripts/build-buildroot.sh"
+grep -Fq 'PROFILE=xiaomi_ax9000_darkyun' "$ROOT/scripts/sign-release-bundle.sh"
+grep -Fq 'BOARD=xiaomi,ax9000-darkyun' "$ROOT/scripts/sign-release-bundle.sh"
+grep -Fq 'PARTITION_VARIANT=darkyun-large-ubi-v1' "$ROOT/scripts/sign-release-bundle.sh"
+grep -Fq 'MIBIB_SHA256=2d79c1b15b8946af733dba5fff5e33bf3ba18863ed734710bd2a5e48fc469c11' "$ROOT/scripts/sign-release-bundle.sh"
+grep -Fq 'APPSBL_SHA256=80908e502add45ee6aa7ad83aa16ec2c3c8bf27b572ac0f9c3fe404b94fc0007' "$ROOT/scripts/sign-release-bundle.sh"
 
 echo 'darkyun single-UBI device contract: ok'
