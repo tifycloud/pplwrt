@@ -8,15 +8,14 @@
 
 ## Linux/amd64 或容器构建
 
-完整 Buildroot 编译必须在**没有私钥**的环境先完成。RC2 是一次性 transition release：
-隔离签名步骤需要旧 key 主签和当前 key 共签，两个路径都必须在仓库外；正式 RC2 由
+完整 Buildroot 编译必须在**没有私钥**的环境先完成。RC2 已完成一次性 transition；
+RC3 及后续版本只使用当前 key 主签。私钥路径必须在仓库外；正式发布由
 `firmware-signing` environment 提供，不从开发机复制长期 secret。
 
 ```sh
-USIGN_SECRET_KEY_FILE=/secure/companywrt-usign-previous.key \
-USIGN_CURRENT_SECRET_KEY_FILE=/secure/companywrt-usign-current.key \
+USIGN_SECRET_KEY_FILE=/secure/companywrt-usign-current.key \
   ./scripts/sign-release-bundle.sh \
-    --input artifacts/preflight/25.12.5-company.2-rc2 --channel rc
+    --input artifacts/preflight/25.12.5-company.2-rc3 --channel rc
 ```
 
 原生 Linux x86_64 可直接运行 `build-buildroot.sh`。Apple Silicon 使用容器脚本；
@@ -30,7 +29,7 @@ USIGN_CURRENT_SECRET_KEY_FILE=/secure/companywrt-usign-current.key \
 该目录含 `COMPILE-ONLY-NOT-A-RELEASE.txt`，绝不能刷机或发布。正式默认目录为：
 
 ```text
-artifacts/rc/25.12.5-company.2-rc2/
+artifacts/rc/25.12.5-company.2-rc3/
 artifacts/beta/25.12.5-company.2-beta1/  # 仅 -betaN VERSION 的显式 beta 构建
 ```
 

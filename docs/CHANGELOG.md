@@ -1,10 +1,16 @@
 # Changelog
 
+## 25.12.5-company.2-rc3 — 2026-08-09
+
+**Release candidate / NOT PRODUCTION.** 基础固件继续不预装 OpenClash、Mihomo、订阅或
+敏感配置；仅保留可复用依赖。公司控制台明确显示“本体未安装”，移除指向不存在页面的
+OpenClash 链接。RC3 使用 RC2 已嵌入的当前 usign key 主签，不再读取旧 RC1 私钥。
+
 ## 25.12.5-company.2-rc2 — 2026-08-08
 
 **Release candidate / NOT PRODUCTION.** 仍无 AX9000 真机 production-gate 证据；本轮只加固
-静态、构建、签名与发布门禁，不创建 stable tag。RC2 尚未发布，随后根据实机证据把
-构建目标改为暗云 Boot 单 UBI 专属变体。
+静态、构建、签名与发布门禁，不创建 stable tag。RC2 已作为不可变 prerelease 发布并完成
+旧/新 key 双签验证；构建目标为实机指纹绑定的暗云 Boot 单 UBI 专属变体。
 
 - 真机只读确认 MIBIB 为 `rootfs=0x01180000+0x0e800000`，两个 APPSBL 指纹一致，运行时
   为单 UBI `kernel/rootfs/rootfs_data`；历史标准布局 RC 明确禁止刷入。

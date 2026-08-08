@@ -78,25 +78,24 @@ tar --zstd -cf "$INPUT/BUILD-HOST-USIGN.tar.zst" -C "$TMP/host-usign" bin
 		sha256sum "$artifact"
 	done
 ) > "$INPUT/SHA256SUMS"
-printf 'mock previous key\n' > "$TMP/previous.key"
 printf 'mock current key\n' > "$TMP/current.key"
 
 "$ROOT/scripts/sign-release-bundle.sh" --input "$INPUT" --output "$OUTPUT" --channel rc \
-	--signing-key "$TMP/previous.key" --current-signing-key "$TMP/current.key" > "$TMP/sign.out"
+	--signing-key "$TMP/current.key" > "$TMP/sign.out"
 
 [ -s "$OUTPUT/RELEASE-MANIFEST" ]
 [ -s "$OUTPUT/RELEASE-MANIFEST.sig" ]
-[ -s "$OUTPUT/RELEASE-MANIFEST.next.sig" ]
+[ ! -e "$OUTPUT/RELEASE-MANIFEST.next.sig" ]
 [ ! -e "$OUTPUT/BUILD-HOST-USIGN.tar.zst" ]
 [ ! -e "$OUTPUT/COMPILE-ONLY-NOT-A-RELEASE.txt" ]
 grep -qx 'FORMAT=companywrt-darkyun-release-v1' "$OUTPUT/RELEASE-MANIFEST"
-grep -qx 'USIGN_KEY_ID=679439846de7ada5' "$OUTPUT/RELEASE-MANIFEST"
-grep -qx 'key_rotation=PREVIOUS_PRIMARY_CURRENT_COSIGN_EMBED_CURRENT' "$OUTPUT/BUILD-METADATA"
+grep -qx 'USIGN_KEY_ID=444eb53ba66e6d45' "$OUTPUT/RELEASE-MANIFEST"
+grep -qx 'key_rotation=NONE' "$OUTPUT/BUILD-METADATA"
 (cd "$OUTPUT" && sha256sum -c SHA256SUMS >/dev/null)
 
 printf 'tamper\n' >> "$INPUT/PACKAGE-MANIFEST"
 if "$ROOT/scripts/sign-release-bundle.sh" --input "$INPUT" --output "$TMP/tampered" --channel rc \
-	--signing-key "$TMP/previous.key" --current-signing-key "$TMP/current.key" > "$TMP/tampered.out" 2>&1; then
+	--signing-key "$TMP/current.key" > "$TMP/tampered.out" 2>&1; then
 	echo 'tampered unsigned bundle unexpectedly reached signing' >&2
 	exit 1
 fi

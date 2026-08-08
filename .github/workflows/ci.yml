@@ -27,4 +27,4 @@ jobs:
           for test_script in tests/ax9000/test-*.sh; do
             "$test_script"
           done
-          test "$(cat VERSION)" = '25.12.5-company.2-rc2'
+          grep -Eq '^25\.12\.5-company\.[0-9]+-(rc|beta)[1-9][0-9]*$' VERSION

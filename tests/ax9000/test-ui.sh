@@ -17,6 +17,11 @@ grep -q 'uci:get("pbr", "config", "enabled")' "$VIEW"
 grep -q 'uhttpd.*redirect_https' "$VIEW"
 grep -q '候选配置 · 未验收' "$VIEW"
 grep -q '仅从 UCI 读取' "$VIEW"
+grep -q '本体未安装' "$VIEW"
+if grep -q "url('admin','services','openclash')" "$VIEW"; then
+	echo 'dashboard exposes a dead OpenClash route although the base image does not install it' >&2
+	exit 1
+fi
 grep -Fq '+luci-compat' "$ROOT/packages/luci-app-company/Makefile"
 grep -Fq '/usr/lib/lua/luci/view/company' "$ROOT/packages/luci-app-company/Makefile"
 if find "$ROOT/packages/luci-app-company/root/usr/share/lua" -type f -print -quit 2>/dev/null | grep -q .; then
