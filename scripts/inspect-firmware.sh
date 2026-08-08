@@ -237,10 +237,16 @@ grep -q "set network.@device\[-1\].type='bridge'" "$TMP/config-generate" || { ec
 for package in firewall4 pbr luci-app-pbr luci-ssl-openssl usign jsonfilter kmod-wireguard wireguard-tools luci-proto-wireguard logd collectd collectd-mod-network; do
 	grep -Eq "^$package - [^[:space:]]+" "$PACKAGE_MANIFEST" || { echo "required package missing from manifest: $package" >&2; exit 1; }
 done
-if grep -Eq '^mwan3 - |^luci-app-sqm - |^sqm-scripts - ' "$PACKAGE_MANIFEST"; then
-	echo 'forbidden/non-base package present (mwan3 or optional SQM)' >&2
+if grep -Eq '^(mwan3|luci-app-sqm|sqm-scripts|luci-app-openclash|openclash|mihomo) - ' "$PACKAGE_MANIFEST"; then
+	echo 'forbidden/non-base package present (mwan3, optional SQM, OpenClash or Mihomo)' >&2
 	exit 1
 fi
+for path in /etc/config/openclash /etc/openclash /usr/share/openclash /usr/bin/mihomo /usr/bin/clash; do
+	if rootfs_has "$path"; then
+		echo "OpenClash/Mihomo payload unexpectedly embedded in base firmware: $path" >&2
+		exit 1
+	fi
+done
 for component in luci-app-company-overlay luci-theme-company-overlay companywrt-device-overlay companywrt-operations-scripts; do
 	rootfs_cat /usr/share/company/CUSTOM-COMPONENTS.manifest | grep -Fq "$component" || { echo "custom component inventory missing: $component" >&2; exit 1; }
 done
@@ -261,6 +267,7 @@ fi
 	printf 'https_redirect=PASS\nwan_accept_rule_embedded=NO\ndefault_password_embedded=NO\n'
 	printf 'root_password_state=%s\nembedded_usign_key_id=%s\n' "$ROOT_PASSWORD_STATE" "$EMBEDDED_KEY_ID"
 	printf 'collectd_plugins_default=DISABLED\ncollectd_network_endpoint=NONE\n'
+	printf 'openclash_preinstalled=NO\nmihomo_preinstalled=NO\n'
 	printf 'loopback_dsa_wan6_generation=PRESERVED\ndefault_firewall_rules=PRESERVED\nwan_wan6_input=REJECT\n'
 	printf 'custom_overlay_components_inventoried=PASS\n'
 	printf 'hardware_validation=%s\n' "$HARDWARE_VALIDATION"

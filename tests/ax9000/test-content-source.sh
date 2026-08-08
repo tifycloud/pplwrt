@@ -12,6 +12,12 @@ for package in sqm-scripts luci-app-sqm; do
 		exit 1
 	fi
 done
+for package in luci-app-openclash openclash mihomo; do
+	if grep -qx "$package" "$ROOT/configs/ax9000/packages.txt"; then
+		echo "OpenClash/Mihomo payload leaked into base: $package" >&2
+		exit 1
+	fi
+done
 grep -q 'mobile' "$ROOT/configs/overlay/usr/share/company/sqm-mobile-template"
 grep -Fq "disabled on \`unicom\`" "$ROOT/configs/overlay/usr/share/company/sqm-mobile-template"
 grep -q 'Plain syslog has no confidentiality' "$ROOT/configs/overlay/usr/share/company/log-forwarding-template"
@@ -42,6 +48,7 @@ grep -Fq 'rootfs contains a preconfigured root password hash' "$ROOT/scripts/ins
 grep -Fq 'root_password_state=' "$ROOT/scripts/inspect-firmware.sh"
 grep -Fq 'loopback_dsa_wan6_generation=PRESERVED' "$ROOT/scripts/inspect-firmware.sh"
 grep -Fq 'default_firewall_rules=PRESERVED' "$ROOT/scripts/inspect-firmware.sh"
+grep -Fq 'openclash_preinstalled=NO' "$ROOT/scripts/inspect-firmware.sh"
 grep -Fq 'refusing to bind a dirty worktree to a release source commit' "$ROOT/scripts/build-buildroot.sh"
 grep -Fq 'ignored files exist in firmware input directories' "$ROOT/scripts/build-in-container.sh"
 

@@ -170,6 +170,36 @@ grep -qx 'root_password_state=LOCKED' "$TMP/locked.report"
 grep -qx 'default_password_embedded=NO' "$TMP/locked.report"
 grep -qx 'partition_variant=darkyun-large-ubi-v1' "$TMP/locked.report"
 grep -qx 'kernel_dtb_layout=PASS' "$TMP/locked.report"
+grep -qx 'openclash_preinstalled=NO' "$TMP/locked.report"
+grep -qx 'mihomo_preinstalled=NO' "$TMP/locked.report"
+
+printf 'luci-app-openclash - 0.47.0-r1\n' >> "$TMP/PACKAGE-MANIFEST"
+if PATH="$MOCK:$PATH" UNSQUASHFS="$MOCK/unsquashfs" DUMPIMAGE="$MOCK/dumpimage" DTC="$MOCK/dtc" "$ROOT/scripts/inspect-firmware.sh" \
+	--image "$TMP/firmware.bin" --package-manifest "$TMP/PACKAGE-MANIFEST" \
+	--report "$TMP/openclash-package.report" --embedded-key-id 444eb53ba66e6d45 \
+	--hardware-validation NOT_PERFORMED_RC_ONLY \
+	--production-gate-sha256 NONE --hardware-evidence-id NONE \
+	--serial-evidence-id NONE --tested-firmware-sha256 NONE > "$TMP/openclash-package.out" 2> "$TMP/openclash-package.err"; then
+	echo 'OpenClash package unexpectedly passed base firmware inspection' >&2
+	exit 1
+fi
+grep -q 'OpenClash or Mihomo' "$TMP/openclash-package.err"
+sed -i.bak '/^luci-app-openclash - /d' "$TMP/PACKAGE-MANIFEST"
+rm -f "$TMP/PACKAGE-MANIFEST.bak"
+
+mkdir -p "$FIXTURE_ROOT/etc/config"
+: > "$FIXTURE_ROOT/etc/config/openclash"
+if PATH="$MOCK:$PATH" UNSQUASHFS="$MOCK/unsquashfs" DUMPIMAGE="$MOCK/dumpimage" DTC="$MOCK/dtc" "$ROOT/scripts/inspect-firmware.sh" \
+	--image "$TMP/firmware.bin" --package-manifest "$TMP/PACKAGE-MANIFEST" \
+	--report "$TMP/openclash-rootfs.report" --embedded-key-id 444eb53ba66e6d45 \
+	--hardware-validation NOT_PERFORMED_RC_ONLY \
+	--production-gate-sha256 NONE --hardware-evidence-id NONE \
+	--serial-evidence-id NONE --tested-firmware-sha256 NONE > "$TMP/openclash-rootfs.out" 2> "$TMP/openclash-rootfs.err"; then
+	echo 'OpenClash rootfs payload unexpectedly passed base firmware inspection' >&2
+	exit 1
+fi
+grep -q 'payload unexpectedly embedded' "$TMP/openclash-rootfs.err"
+rm -f "$FIXTURE_ROOT/etc/config/openclash"
 
 cat > "$FIXTURE_ROOT/etc/shadow" <<'EOF'
 root::20000:0:99999:7:::
