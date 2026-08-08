@@ -20,7 +20,7 @@ mkdir -p "$TMP/scripts"
 cp "$ROOT/scripts/build-buildroot.sh" "$TMP/scripts/build-buildroot.sh"
 printf '25.12.5-company.2-beta1\n' > "$TMP/VERSION"
 BETA=$("$TMP/scripts/build-buildroot.sh" --channel beta --compile-only --print-output)
-[ "$BETA" = "$TMP/artifacts/beta/25.12.5-company.2-beta1" ]
+[ "$BETA" = "$TMP/artifacts/preflight/25.12.5-company.2-beta1" ]
 CUSTOM=$("$ROOT/scripts/build-buildroot.sh" --channel rc --compile-only --output /tmp/companywrt-custom-output --print-output)
 [ "$CUSTOM" = /tmp/companywrt-custom-output ]
 RELATIVE=$(cd "$ROOT" && ./scripts/build-buildroot.sh --channel rc --compile-only --output artifacts/relative-output --print-output)
@@ -31,7 +31,7 @@ if "$ROOT/scripts/build-buildroot.sh" --channel stable --print-output > /dev/nul
 fi
 grep -Fq 'OpenWrt source checkout failed after 3 attempts' "$ROOT/scripts/build-buildroot.sh"
 grep -Fq 'refusing full Buildroot compilation as root' "$ROOT/scripts/build-buildroot.sh"
-grep -Fq 'setpriv --reuid=1000 --regid=1000 --init-groups' "$ROOT/scripts/build-in-container.sh"
+grep -Fq 'setpriv --reuid=10001 --regid=10001 --clear-groups' "$ROOT/scripts/build-in-container.sh"
 if grep -q 'FORCE_UNSAFE_CONFIGURE' "$ROOT/scripts/build-buildroot.sh" "$ROOT/scripts/build-in-container.sh"; then
 	echo 'container bypasses an upstream root-build safety check' >&2
 	exit 1
@@ -40,4 +40,4 @@ if grep -Eq -- '--signing-key|USIGN_SECRET_KEY_FILE|USIGN_CURRENT_SECRET_KEY_FIL
 	echo 'compiler entrypoint still accepts release signing secrets' >&2
 	exit 1
 fi
-echo 'versioned rc/beta output resolution and stable version gate: ok'
+echo 'compile-only preflight output resolution and stable version gate: ok'

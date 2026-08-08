@@ -31,11 +31,10 @@ docker run --rm --platform linux/amd64 \
     tar --exclude=.git --exclude=.build --exclude=.cache --exclude=artifacts --exclude=.DS_Store -cf - -C /src . | tar -xf - -C /work/project
     apt-get update
     apt-get install -y --no-install-recommends build-essential bzip2 ca-certificates clang curl file flex bison g++ gawk gcc-multilib gettext git libncurses-dev libssl-dev patch perl python3 python3-setuptools rsync squashfs-tools subversion swig tar unzip wget zlib1g-dev zstd
-    groupadd --gid 1000 builder
-    useradd --uid 1000 --gid 1000 --no-create-home --shell /bin/sh builder
-    chown -R 1000:1000 /work
+    mkdir -p /tmp/companywrt-builder
+    chown -R 10001:10001 /work /tmp/companywrt-builder
     cd /work/project
-    setpriv --reuid=1000 --regid=1000 --init-groups ./scripts/build-buildroot.sh --build-root /work/cache "$@"
+    HOME=/tmp/companywrt-builder setpriv --reuid=10001 --regid=10001 --clear-groups ./scripts/build-buildroot.sh --build-root /work/cache "$@"
     mkdir -p /src/artifacts
     cp -a /work/project/artifacts/. /src/artifacts/
   ' -- "$@"
