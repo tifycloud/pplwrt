@@ -425,16 +425,26 @@ for sbom in "$OUTPUT_WORK"/*.bom.cdx.json; do
 done
 [ "$SBOM_COUNT" -eq 1 ] || { echo 'Buildroot must produce exactly one custom-profile CycloneDX SBOM' >&2; exit 1; }
 
-HOST_DUMPIMAGE_CANDIDATES=$(find "$SOURCE_DIR/build_dir/host" -type f -path '*/u-boot-*/tools/dumpimage' -print)
-[ "$(printf '%s\n' "$HOST_DUMPIMAGE_CANDIDATES" | sed '/^$/d' | wc -l | tr -d '[:space:]')" -eq 1 ] || {
-	echo 'Buildroot must produce exactly one host dumpimage inspector binary' >&2
-	exit 1
+resolve_single_inspector_tool() {
+	tool_name=$1
+	path_pattern=$2
+	candidates=$(find "$SOURCE_DIR/build_dir" -type f -path "$path_pattern" -print)
+	[ "$(printf '%s\n' "$candidates" | sed '/^$/d' | wc -l | tr -d '[:space:]')" -eq 1 ] || {
+		echo "Buildroot must produce exactly one host $tool_name inspector binary" >&2
+		exit 1
+	}
+	tool_path=$(printf '%s\n' "$candidates" | sed -n '1p')
+	[ -x "$tool_path" ] || { echo "Buildroot host $tool_name is not executable" >&2; exit 1; }
+	printf '%s\n' "$tool_path"
 }
-HOST_DUMPIMAGE=$(printf '%s\n' "$HOST_DUMPIMAGE_CANDIDATES" | sed -n '1p')
-[ -x "$HOST_DUMPIMAGE" ] || { echo 'Buildroot host dumpimage is not executable' >&2; exit 1; }
+
+HOST_DUMPIMAGE=$(resolve_single_inspector_tool dumpimage '*/host/u-boot-*/tools/dumpimage')
+HOST_DTC=$(resolve_single_inspector_tool dtc '*/linux-*/scripts/dtc/dtc')
+HOST_UNSQUASHFS=$(resolve_single_inspector_tool unsquashfs '*/host/squashfs4-*/squashfs-tools/unsquashfs')
 
 DUMPIMAGE="$HOST_DUMPIMAGE" \
-DTC="$SOURCE_DIR/staging_dir/host/bin/dtc" \
+DTC="$HOST_DTC" \
+UNSQUASHFS="$HOST_UNSQUASHFS" \
 "$ROOT/scripts/inspect-firmware.sh" \
 	--image "$IMAGE" \
 	--package-manifest "$OUTPUT_WORK/PACKAGE-MANIFEST" \
