@@ -6,6 +6,7 @@
 | 版本与长期维护 | [roadmap.md](roadmap.md) |
 | 可复现构建、校验和容器 | [build.md](build.md) |
 | AX9000 刷机与救援 | [flash.md](flash.md) |
+| 暗云 Boot 大分区兼容性 | [ax9000-partition-compatibility.md](ax9000-partition-compatibility.md) |
 | 第一次启动 | [first-config.md](first-config.md) |
 | 双 WAN、PBR 和 fwmark | [dual-wan-pbr.md](dual-wan-pbr.md) |
 | VLAN/WireGuard | [vlan-wireguard.md](vlan-wireguard.md) |

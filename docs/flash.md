@@ -23,7 +23,20 @@ bootloader 签名策略或已解锁状态也可能不同。不要用 LuCI 语言
 
 ## 当前 kwrt 设备必须先采集
 
-在不写 flash/env 的前提下保存并脱敏：
+如果设备使用暗云 Boot 大分区，先读
+[ax9000-partition-compatibility.md](ax9000-partition-compatibility.md)。仓库提供只读采集器；
+把脚本复制到路由器后运行：
+
+```sh
+chmod 700 /tmp/collect-device-layout.sh
+/tmp/collect-device-layout.sh
+```
+
+输出位于 `/tmp/companywrt-device-layout.txt`。先检查并脱敏，再交给维护者。默认不读取
+U-Boot environment；只有确认 `/etc/fw_env.config` 与本机 Bootloader 完全匹配后，才用
+`--include-bootenv` 再采集。脚本不会执行 flash/env/UCI/MTD 写入。
+
+也可以在不写 flash/env 的前提下手工保存并脱敏：
 
 ```sh
 ubus call system board
