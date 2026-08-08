@@ -16,7 +16,8 @@
   color-scheme: light;
 }
 
-body.company-dashboard {
+.company-dashboard {
+  min-height: 100vh;
   background: var(--company-surface);
   color: var(--company-ink);
 }
