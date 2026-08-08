@@ -16,7 +16,10 @@ printf '%s\n' "$SOURCE_COMMIT" | grep -Eq '^[0-9a-f]{40}$' || { echo 'invalid so
 [ -z "$(git -C "$ROOT" status --porcelain --untracked-files=all)" ] || { echo 'refusing a dirty worktree container build' >&2; exit 1; }
 ignored_inputs=$(git -C "$ROOT" ls-files --others --ignored --exclude-standard -- configs/overlay packages/luci-app-company/root packages/luci-theme-company/root | grep -v '/\.DS_Store$' || true)
 [ -z "$ignored_inputs" ] || { echo 'ignored files exist in firmware input directories; refusing possible secret leakage' >&2; exit 1; }
-[ -n "${USIGN_SECRET_KEY_FILE:-}" ] && [ -s "$USIGN_SECRET_KEY_FILE" ] || { echo 'USIGN_SECRET_KEY_FILE is required for a signed container build' >&2; exit 1; }
+if [ -z "${USIGN_SECRET_KEY_FILE:-}" ] || [ ! -s "$USIGN_SECRET_KEY_FILE" ]; then
+  echo 'USIGN_SECRET_KEY_FILE is required for a signed container build' >&2
+  exit 1
+fi
 SECRET_KEY_REAL=$(realpath "$USIGN_SECRET_KEY_FILE")
 case "$SECRET_KEY_REAL" in "$(realpath "$ROOT")"/*) echo 'signing key must be outside the repository' >&2; exit 1 ;; esac
 docker volume create "$VOLUME" >/dev/null

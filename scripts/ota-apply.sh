@@ -65,7 +65,9 @@ case "$WORK_DIR" in *"'"*|*[![:print:]]*) ota_die "work directory contains unsaf
 if [ -z "$WORK_DIR" ]; then
 	WORK_DIR=$(mktemp -d "${TMPDIR:-/tmp}/companywrt-ota-apply.XXXXXX")
 else
-	[ ! -e "$WORK_DIR" ] && [ ! -L "$WORK_DIR" ] || ota_die "work directory must not already exist"
+	if [ -e "$WORK_DIR" ] || [ -L "$WORK_DIR" ]; then
+		ota_die "work directory must not already exist"
+	fi
 	mkdir -m 0700 -- "$WORK_DIR" || ota_die "cannot create work directory: $WORK_DIR"
 fi
 

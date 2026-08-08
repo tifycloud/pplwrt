@@ -46,7 +46,9 @@ die() {
 
 valid_iface() {
 	value=$1
-	[ -n "$value" ] && [ "${#value}" -le 15 ] || return 1
+	if [ -z "$value" ] || [ "${#value}" -gt 15 ]; then
+		return 1
+	fi
 	case "$value" in
 		[-.]*|*[!A-Za-z0-9_.-]*) return 1 ;;
 	esac
@@ -142,7 +144,9 @@ cidr_overlaps() {
 
 valid_domain() {
 	value=$1
-	[ -n "$value" ] && [ "${#value}" -le 253 ] || return 1
+	if [ -z "$value" ] || [ "${#value}" -gt 253 ]; then
+		return 1
+	fi
 	case "$value" in
 		.*|*.|*[!A-Za-z0-9.-]*) return 1 ;;
 	esac
@@ -254,7 +258,9 @@ valid_cidr "$OFFICE_CIDR" || die "invalid --office-cidr IPv4 CIDR"
 OFFICE_CIDR=$(canonical_cidr "$OFFICE_CIDR")
 
 if [ -n "$UNICOM_ADDRESS$UNICOM_GATEWAY" ]; then
-	[ -n "$UNICOM_ADDRESS" ] && [ -n "$UNICOM_GATEWAY" ] || die "unicom static address and gateway must be supplied together"
+	if [ -z "$UNICOM_ADDRESS" ] || [ -z "$UNICOM_GATEWAY" ]; then
+		die "unicom static address and gateway must be supplied together"
+	fi
 	valid_host_cidr "$UNICOM_ADDRESS" || die "invalid --unicom-address host CIDR (prefix /1 through /30)"
 	valid_ipv4 "$UNICOM_GATEWAY" || die "invalid --unicom-gateway IPv4 address"
 	[ "${UNICOM_ADDRESS%/*}" != "$UNICOM_GATEWAY" ] || die "unicom gateway duplicates its interface address"
@@ -262,7 +268,9 @@ if [ -n "$UNICOM_ADDRESS$UNICOM_GATEWAY" ]; then
 	cidr_overlaps "$UNICOM_ADDRESS" "$OFFICE_CIDR" && die "unicom WAN subnet overlaps the office source subnet"
 fi
 if [ -n "$MOBILE_ADDRESS$MOBILE_GATEWAY" ]; then
-	[ -n "$MOBILE_ADDRESS" ] && [ -n "$MOBILE_GATEWAY" ] || die "mobile static address and gateway must be supplied together"
+	if [ -z "$MOBILE_ADDRESS" ] || [ -z "$MOBILE_GATEWAY" ]; then
+		die "mobile static address and gateway must be supplied together"
+	fi
 	valid_host_cidr "$MOBILE_ADDRESS" || die "invalid --mobile-address host CIDR (prefix /1 through /30)"
 	valid_ipv4 "$MOBILE_GATEWAY" || die "invalid --mobile-gateway IPv4 address"
 	[ "${MOBILE_ADDRESS%/*}" != "$MOBILE_GATEWAY" ] || die "mobile gateway duplicates its interface address"
@@ -278,11 +286,17 @@ if [ -z "$OUTPUT" ]; then
 	OUTPUT=$(mktemp -d "${TMPDIR:-/tmp}/company-network-plan.XXXXXX")
 else
 	case "$OUTPUT" in *[![:print:]]*) die "output path contains control characters" ;; esac
-	[ ! -e "$OUTPUT" ] && [ ! -L "$OUTPUT" ] || die "output directory must not already exist"
+	if [ -e "$OUTPUT" ] || [ -L "$OUTPUT" ]; then
+		die "output directory must not already exist"
+	fi
 	mkdir -m 0700 -- "$OUTPUT" || die "cannot create output directory: $OUTPUT"
 fi
-[ ! -e "$OUTPUT/uci.batch" ] && [ ! -L "$OUTPUT/uci.batch" ] || die "refusing to overwrite existing uci.batch"
-[ ! -e "$OUTPUT/REVIEW.md" ] && [ ! -L "$OUTPUT/REVIEW.md" ] || die "refusing to overwrite existing REVIEW.md"
+if [ -e "$OUTPUT/uci.batch" ] || [ -L "$OUTPUT/uci.batch" ]; then
+	die "refusing to overwrite existing uci.batch"
+fi
+if [ -e "$OUTPUT/REVIEW.md" ] || [ -L "$OUTPUT/REVIEW.md" ]; then
+	die "refusing to overwrite existing REVIEW.md"
+fi
 BATCH="$OUTPUT/uci.batch"
 : > "$BATCH"
 

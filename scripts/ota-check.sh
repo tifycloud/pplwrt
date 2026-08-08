@@ -58,7 +58,9 @@ case "$DOWNLOAD_DIR" in *"'"*|*[![:print:]]*) ota_die "download directory contai
 if [ -z "$DOWNLOAD_DIR" ]; then
 	DOWNLOAD_DIR=$(mktemp -d "${TMPDIR:-/tmp}/companywrt-ota-check.XXXXXX")
 else
-	[ ! -e "$DOWNLOAD_DIR" ] && [ ! -L "$DOWNLOAD_DIR" ] || ota_die "download directory must not already exist"
+	if [ -e "$DOWNLOAD_DIR" ] || [ -L "$DOWNLOAD_DIR" ]; then
+		ota_die "download directory must not already exist"
+	fi
 	mkdir -m 0700 -- "$DOWNLOAD_DIR" || ota_die "cannot create download directory: $DOWNLOAD_DIR"
 fi
 

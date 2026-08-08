@@ -93,7 +93,9 @@ ota_fetch() {
 	destination=$2
 	max_bytes=$3
 	printf '%s\n' "$max_bytes" | grep -Eq '^[1-9][0-9]*$' || ota_die "invalid download size bound"
-	[ ! -e "$destination" ] && [ ! -L "$destination" ] || ota_die "refusing to overwrite staged path: $destination"
+	if [ -e "$destination" ] || [ -L "$destination" ]; then
+		ota_die "refusing to overwrite staged path: $destination"
+	fi
 	case "$source" in
 		https://*)
 			command -v curl >/dev/null 2>&1 || ota_die "curl is required for HTTPS downloads"
@@ -142,7 +144,9 @@ ota_stage_and_verify() {
 	public_key=$4
 	work_dir=$5
 
-	[ -d "$work_dir" ] && [ ! -L "$work_dir" ] || ota_die "staging directory is missing or is a symlink: $work_dir"
+	if [ ! -d "$work_dir" ] || [ -L "$work_dir" ]; then
+		ota_die "staging directory is missing or is a symlink: $work_dir"
+	fi
 	chmod 0700 "$work_dir" || ota_die "cannot protect staging directory: $work_dir"
 	OTA_STAGED_MANIFEST="$work_dir/RELEASE-MANIFEST"
 	ota_fetch "$manifest_source" "$OTA_STAGED_MANIFEST" 65536
