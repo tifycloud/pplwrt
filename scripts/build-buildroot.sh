@@ -296,6 +296,10 @@ cp -R "$OVERLAY/." "$FILES_DIR/"
 	printf 'CONFIG_JSON_OVERVIEW_IMAGE_INFO=y\n'
 	printf 'CONFIG_JSON_CYCLONEDX_SBOM=y\n'
 	printf '# CONFIG_PACKAGE_dnsmasq is not set\n'
+	# OpenClash only needs Ruby/YAML parsing. The feeds default enables Ruby
+	# YJIT on aarch64, which adds a full Rust/LLVM host toolchain without
+	# providing any required router functionality.
+	printf '# CONFIG_RUBY_ENABLE_YJIT is not set\n'
 	for package in $PACKAGES; do
 		printf 'CONFIG_PACKAGE_%s=y\n' "$package"
 	done
