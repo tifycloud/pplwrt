@@ -21,6 +21,9 @@ body.company-dashboard {
   color: var(--company-ink);
 }
 
+.company-skip-link { position: absolute; top: .6rem; left: -9999px; z-index: 10; padding: .5rem .7rem; border-radius: .3rem; background: var(--company-ink); color: #fff !important; font-size: .78rem; text-decoration: none !important; }
+.company-skip-link:focus-visible { left: .75rem; outline: 2px solid var(--company-accent); outline-offset: 2px; }
+.company-dashboard main:focus-visible { outline: 2px solid var(--company-accent); outline-offset: .35rem; }
 .company-shell { max-width: 1160px; margin: 0 auto; padding: 1.6rem 1.1rem 3.5rem; }
 .company-header { display: flex; align-items: center; gap: 1rem; padding: 1.25rem 1.35rem; background: linear-gradient(120deg, #fff 0%, #f2fafb 100%); border: 1px solid var(--company-border); border-radius: .65rem; box-shadow: var(--company-shadow); }
 .company-brand-mark { display: grid; flex: 0 0 3.35rem; height: 3.35rem; place-items: center; border-radius: .7rem; background: var(--company-ink); color: #dff9f8; font: 800 1rem/1 system-ui, sans-serif; letter-spacing: .05em; }

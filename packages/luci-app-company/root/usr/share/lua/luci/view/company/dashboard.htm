@@ -1,6 +1,7 @@
 <%+header%>
 <link rel="stylesheet" href="/luci-static/company/css/company.css" />
 <div class="company-shell company-dashboard" id="company-dashboard">
+  <a class="company-skip-link" href="#company-content">跳转到主要内容</a>
   <header class="company-header">
     <div class="company-brand-mark" aria-hidden="true">CW</div>
     <div class="company-header-copy">
@@ -8,15 +9,16 @@
       <h1>CompanyWrt</h1>
       <p>企业网络运行总览 <span class="company-dot">·</span> 只读安全入口</p>
     </div>
-    <div class="company-header-meta"><span class="company-live-dot"></span><span>稳定基线</span><small>25.12.5</small></div>
+    <div class="company-header-meta"><span class="company-live-dot" aria-hidden="true"></span><span>稳定基线</span><small>25.12.5</small></div>
   </header>
 
-  <section class="company-kpis" aria-label="系统状态摘要">
+  <main id="company-content" tabindex="-1">
+    <section class="company-kpis" aria-label="系统状态摘要">
     <div class="company-kpi company-kpi-ok"><span class="company-kpi-label">设备健康</span><strong>可管理</strong><span>有线管理面已就绪</span></div>
     <div class="company-kpi company-kpi-ok"><span class="company-kpi-label">防火墙</span><strong>fw4 / nftables</strong><span>默认拒绝 WAN 入站</span></div>
     <div class="company-kpi company-kpi-neutral"><span class="company-kpi-label">无线策略</span><strong>HE80</strong><span>HE160 需专项实测</span></div>
     <div class="company-kpi company-kpi-warn"><span class="company-kpi-label">OTA</span><strong>需人工确认</strong><span>自动升级已禁用</span></div>
-  </section>
+    </section>
 
   <div class="company-section-heading"><div><p class="company-eyebrow">CONTROL PLANE</p><h2>策略与服务</h2></div><span class="company-readonly">只读视图</span></div>
   <div class="company-grid company-grid-main">
@@ -43,11 +45,12 @@
     </section>
   </div>
 
-  <div class="company-section-heading"><div><p class="company-eyebrow">OPERATE SAFELY</p><h2>管理员操作</h2></div><span class="company-note">变更前先备份</span></div>
-  <section class="company-admin-strip">
+    <div class="company-section-heading"><div><p class="company-eyebrow">OPERATE SAFELY</p><h2>管理员操作</h2></div><span class="company-note">变更前先备份</span></div>
+    <section class="company-admin-strip">
     <div class="company-admin-copy"><span class="company-icon company-icon-lock" aria-hidden="true">▣</span><div><strong>配置和日志是现场资产</strong><p>VLAN、WireGuard、WAN、订阅和日志不会写入 git；OTA 前备份并保存离线副本。</p></div></div>
     <div class="company-actions"><a class="company-button" href="<%=url('admin','system','backup')%>">备份配置</a><a class="company-button company-button-quiet" href="<%=url('admin','system','flash')%>">刷写/OTA</a></div>
-  </section>
+    </section>
+  </main>
   <footer class="company-footer"><span>CompanyWrt · Xiaomi AX9000</span><span>官方救援主题始终保留</span></footer>
 </div>
 <script>
