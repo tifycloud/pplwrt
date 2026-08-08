@@ -425,7 +425,15 @@ for sbom in "$OUTPUT_WORK"/*.bom.cdx.json; do
 done
 [ "$SBOM_COUNT" -eq 1 ] || { echo 'Buildroot must produce exactly one custom-profile CycloneDX SBOM' >&2; exit 1; }
 
-DUMPIMAGE="$SOURCE_DIR/staging_dir/host/bin/dumpimage" \
+HOST_DUMPIMAGE_CANDIDATES=$(find "$SOURCE_DIR/build_dir/host" -type f -path '*/u-boot-*/tools/dumpimage' -print)
+[ "$(printf '%s\n' "$HOST_DUMPIMAGE_CANDIDATES" | sed '/^$/d' | wc -l | tr -d '[:space:]')" -eq 1 ] || {
+	echo 'Buildroot must produce exactly one host dumpimage inspector binary' >&2
+	exit 1
+}
+HOST_DUMPIMAGE=$(printf '%s\n' "$HOST_DUMPIMAGE_CANDIDATES" | sed -n '1p')
+[ -x "$HOST_DUMPIMAGE" ] || { echo 'Buildroot host dumpimage is not executable' >&2; exit 1; }
+
+DUMPIMAGE="$HOST_DUMPIMAGE" \
 DTC="$SOURCE_DIR/staging_dir/host/bin/dtc" \
 "$ROOT/scripts/inspect-firmware.sh" \
 	--image "$IMAGE" \
