@@ -22,6 +22,7 @@ PRODUCTION_GATE_SHA256=NONE
 HARDWARE_EVIDENCE_ID=NONE
 SERIAL_EVIDENCE_ID=NONE
 TESTED_FIRMWARE_SHA256=NONE
+EXPECTED_PACKAGE_COUNT=250
 
 usage() {
 	cat <<'EOF'
@@ -172,6 +173,8 @@ OPENWRT_COMMIT=$(json_value '.openwrt.commit')
 OPENWRT_TAG=$(json_value '.openwrt.tag')
 OPENWRT_SOURCE_URL=$(json_value '.openwrt.source')
 PARTITION_VARIANT=$(json_value '.partition_variant')
+[ "$(json_value '.package_inventory.expected_count')" = "$EXPECTED_PACKAGE_COUNT" ] || { echo 'device package inventory count mismatch' >&2; exit 1; }
+[ "$(json_value '.package_inventory.required_selection')" = configs/ax9000/packages.txt ] || { echo 'device required package selection path mismatch' >&2; exit 1; }
 [ "$(json_value '.profile')" = "$PROFILE" ] || { echo 'profile metadata mismatch' >&2; exit 1; }
 [ "$(json_value '.board')" = "$BOARD" ] || { echo 'board metadata mismatch' >&2; exit 1; }
 printf '%s\n' "$OPENWRT_COMMIT" | grep -Eq '^[0-9a-f]{40}$' || { echo 'pinned OpenWrt commit is invalid' >&2; exit 1; }
@@ -295,6 +298,10 @@ cp -R "$OVERLAY/." "$FILES_DIR/"
 	printf 'CONFIG_TARGET_ROOTFS_SQUASHFS=y\n'
 	printf 'CONFIG_JSON_OVERVIEW_IMAGE_INFO=y\n'
 	printf 'CONFIG_JSON_CYCLONEDX_SBOM=y\n'
+	# LuCI translation packages are generated from the language selector. Merely
+	# selecting their package names is discarded by defconfig when the language
+	# tristate is unset.
+	printf 'CONFIG_LUCI_LANG_zh_Hans=y\n'
 	printf '# CONFIG_PACKAGE_dnsmasq is not set\n'
 	# OpenClash only needs Ruby/YAML parsing. The feeds default enables Ruby
 	# YJIT on aarch64, which adds a full Rust/LLVM host toolchain without
@@ -308,6 +315,10 @@ cp -R "$OVERLAY/." "$FILES_DIR/"
 make -C "$SOURCE_DIR" defconfig
 grep -qx 'CONFIG_TARGET_qualcommax_ipq807x_DEVICE_xiaomi_ax9000_darkyun=y' "$SOURCE_DIR/.config" || { echo 'custom target disappeared during defconfig' >&2; exit 1; }
 grep -qx 'CONFIG_PACKAGE_dnsmasq-full=y' "$SOURCE_DIR/.config" || { echo 'dnsmasq-full was not selected' >&2; exit 1; }
+grep -qx 'CONFIG_LUCI_LANG_zh_Hans=y' "$SOURCE_DIR/.config" || { echo 'Simplified Chinese LuCI language was not selected' >&2; exit 1; }
+for translation in luci-i18n-base-zh-cn luci-i18n-pbr-zh-cn; do
+	grep -qx "CONFIG_PACKAGE_${translation}=y" "$SOURCE_DIR/.config" || { echo "required LuCI translation was not selected: $translation" >&2; exit 1; }
+done
 if grep -qx 'CONFIG_PACKAGE_dnsmasq=y' "$SOURCE_DIR/.config"; then
 	echo 'conflicting dnsmasq package remained selected' >&2
 	exit 1
@@ -365,8 +376,14 @@ SOURCE_SBOM="$TARGET_BIN/$IMAGE_PREFIX.bom.cdx.json"
 [ -s "$SOURCE_PACKAGE_MANIFEST" ] || { echo 'Buildroot package manifest is missing' >&2; exit 1; }
 [ -s "$SOURCE_SBOM" ] || { echo 'Buildroot CycloneDX SBOM is missing' >&2; exit 1; }
 awk '/^[A-Za-z0-9][A-Za-z0-9+_.@-]* - [^[:space:]]+$/ { print }' "$SOURCE_PACKAGE_MANIFEST" | LC_ALL=C sort -u > "$OUTPUT_WORK/PACKAGE-MANIFEST"
-[ "$(wc -l < "$OUTPUT_WORK/PACKAGE-MANIFEST" | tr -d '[:space:]')" -eq 251 ] || { echo 'resolved package manifest must contain exactly 251 unique package/version entries' >&2; exit 1; }
-[ "$(awk -F' - ' '{print $1}' "$OUTPUT_WORK/PACKAGE-MANIFEST" | LC_ALL=C sort -u | wc -l | tr -d '[:space:]')" -eq 251 ] || { echo 'resolved package manifest contains duplicate package names' >&2; exit 1; }
+[ "$(wc -l < "$OUTPUT_WORK/PACKAGE-MANIFEST" | tr -d '[:space:]')" -eq "$EXPECTED_PACKAGE_COUNT" ] || { echo "resolved package manifest must contain exactly $EXPECTED_PACKAGE_COUNT unique package/version entries" >&2; exit 1; }
+[ "$(awk -F' - ' '{print $1}' "$OUTPUT_WORK/PACKAGE-MANIFEST" | LC_ALL=C sort -u | wc -l | tr -d '[:space:]')" -eq "$EXPECTED_PACKAGE_COUNT" ] || { echo 'resolved package manifest contains duplicate package names' >&2; exit 1; }
+for package in $PACKAGES; do
+	awk -F' - ' -v wanted="$package" '$1 == wanted { found=1 } END { exit !found }' "$OUTPUT_WORK/PACKAGE-MANIFEST" || {
+		echo "selected package is missing from resolved manifest: $package" >&2
+		exit 1
+	}
+done
 cp "$SOURCE_SBOM" "$OUTPUT_WORK/$IMAGE_PREFIX.bom.cdx.json"
 cp "$SOURCE_DIR/.config" "$OUTPUT_WORK/OPENWRT-CONFIG"
 {
@@ -403,7 +420,7 @@ for sbom in "$OUTPUT_WORK"/*.bom.cdx.json; do
 		--sbom "$sbom" \
 		--components "$ROOT/CUSTOM-COMPONENTS.manifest" \
 		--package-manifest "$OUTPUT_WORK/PACKAGE-MANIFEST" \
-		--expected-package-count 251
+		--expected-package-count "$EXPECTED_PACKAGE_COUNT"
 	SBOM_COUNT=$((SBOM_COUNT + 1))
 done
 [ "$SBOM_COUNT" -eq 1 ] || { echo 'Buildroot must produce exactly one custom-profile CycloneDX SBOM' >&2; exit 1; }
@@ -431,6 +448,7 @@ tar --zstd -cf "$OUTPUT_WORK/BUILD-HOST-USIGN.tar.zst" \
 	printf 'version=%s\nchannel=%s\nprofile=%s\nboard=%s\n' "$VERSION" "$CHANNEL" "$PROFILE" "$BOARD"
 	printf 'partition_variant=%s\nopenwrt_release=%s\nopenwrt_commit=%s\n' "$PARTITION_VARIANT" "$RELEASE" "$OPENWRT_COMMIT"
 	printf 'source_commit=%s\ndevice_patch_sha256=%s\nbuild_system=full-openwrt-buildroot\n' "$SOURCE_COMMIT" "$PATCH_SHA256"
+	printf 'package_count=%s\n' "$EXPECTED_PACKAGE_COUNT"
 	printf 'release_signing=NOT_PERFORMED_COMPILE_ONLY\nhardware_validation=%s\n' "$HARDWARE_VALIDATION"
 	printf 'production_gate_sha256=%s\nhardware_evidence_id=%s\nserial_evidence_id=%s\ntested_firmware_sha256=%s\n' \
 		"$PRODUCTION_GATE_SHA256" "$HARDWARE_EVIDENCE_ID" "$SERIAL_EVIDENCE_ID" "$TESTED_FIRMWARE_SHA256"

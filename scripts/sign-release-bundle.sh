@@ -13,6 +13,7 @@ SIGNING_KEY=${USIGN_SECRET_KEY_FILE:-}
 CURRENT_SIGNING_KEY=${USIGN_CURRENT_SECRET_KEY_FILE:-}
 RELEASE_BASE_URL=""
 VERSION=$(sed -n '1p' "$ROOT/VERSION")
+EXPECTED_PACKAGE_COUNT=250
 
 usage() {
 	cat <<'EOF'
@@ -74,6 +75,7 @@ metadata_value() {
 [ "$(metadata_value openwrt_release)" = 25.12.5 ] || { echo 'unsigned OpenWrt release mismatch' >&2; exit 1; }
 [ "$(metadata_value openwrt_commit)" = f0a60eee2fe051741c643ea6118718aae1ef17fb ] || { echo 'unsigned OpenWrt commit mismatch' >&2; exit 1; }
 [ "$(metadata_value build_system)" = full-openwrt-buildroot ] || { echo 'unsigned build system mismatch' >&2; exit 1; }
+[ "$(metadata_value package_count)" = "$EXPECTED_PACKAGE_COUNT" ] || { echo 'unsigned expected package count mismatch' >&2; exit 1; }
 [ "$(metadata_value release_signing)" = NOT_PERFORMED_COMPILE_ONLY ] || { echo 'input was not produced by the no-secret compile path' >&2; exit 1; }
 SOURCE_COMMIT=$(metadata_value source_commit)
 printf '%s\n' "$SOURCE_COMMIT" | grep -Eq '^[0-9a-f]{40}$' || { echo 'unsigned source commit is invalid' >&2; exit 1; }
@@ -110,7 +112,7 @@ IMAGE_SIZE=$(wc -c < "$IMAGE" | tr -d '[:space:]')
 grep -qx "image_sha256=$IMAGE_SHA" "$INPUT/FIRMWARE-CONTENT-REPORT.txt" || { echo 'content report is not bound to the unsigned image' >&2; exit 1; }
 grep -qx 'kernel_dtb_layout=PASS' "$INPUT/FIRMWARE-CONTENT-REPORT.txt" || { echo 'kernel DTB inspection did not pass' >&2; exit 1; }
 grep -qx 'partition_variant=darkyun-large-ubi-v1' "$INPUT/FIRMWARE-CONTENT-REPORT.txt" || { echo 'content report partition mismatch' >&2; exit 1; }
-[ "$(wc -l < "$INPUT/PACKAGE-MANIFEST" | tr -d '[:space:]')" -eq 251 ] || { echo 'unsigned package manifest count mismatch' >&2; exit 1; }
+[ "$(wc -l < "$INPUT/PACKAGE-MANIFEST" | tr -d '[:space:]')" -eq "$EXPECTED_PACKAGE_COUNT" ] || { echo 'unsigned package manifest count mismatch' >&2; exit 1; }
 
 HOST_USIGN_ARCHIVE="$INPUT/BUILD-HOST-USIGN.tar.zst"
 [ -f "$HOST_USIGN_ARCHIVE" ] && [ ! -L "$HOST_USIGN_ARCHIVE" ] || { echo 'verified Buildroot host usign archive is missing' >&2; exit 1; }
@@ -204,6 +206,7 @@ fi
 	printf 'appsbl_sha256=80908e502add45ee6aa7ad83aa16ec2c3c8bf27b572ac0f9c3fe404b94fc0007\n'
 	printf 'openwrt_release=25.12.5\nopenwrt_commit=f0a60eee2fe051741c643ea6118718aae1ef17fb\nsource_commit=%s\n' "$SOURCE_COMMIT"
 	printf 'device_patch_sha256=%s\nbuild_system=full-openwrt-buildroot\n' "$(metadata_value device_patch_sha256)"
+	printf 'package_count=%s\n' "$EXPECTED_PACKAGE_COUNT"
 	printf 'manifest_usign_key_id=%s\nembedded_usign_key_id=%s\n' "$MANIFEST_PUBLIC_KEY_ID" "$EMBEDDED_PUBLIC_KEY_ID"
 	if [ "$KEY_TRANSITION" -eq 1 ]; then printf 'key_rotation=PREVIOUS_PRIMARY_CURRENT_COSIGN_EMBED_CURRENT\n'; else printf 'key_rotation=NONE\n'; fi
 	printf 'custom_components=overlay-not-apk\nhardware_validation=%s\n' "$HARDWARE_VALIDATION"
