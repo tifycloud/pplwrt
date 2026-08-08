@@ -234,11 +234,32 @@ case "$(uname -s):$(uname -m)" in
 esac
 
 SOURCE_DIR="$BUILD_ROOT/openwrt-$RELEASE-$PROFILE"
+remove_generated_source() {
+	case "$SOURCE_DIR" in
+		"$BUILD_ROOT"/openwrt-*) rm -rf "$SOURCE_DIR" ;;
+		*) echo 'refusing unsafe generated source path' >&2; exit 1 ;;
+	esac
+}
 if [ "$FORCE_SOURCE" -eq 1 ] && [ -e "$SOURCE_DIR" ]; then
-	case "$SOURCE_DIR" in "$BUILD_ROOT"/openwrt-*) rm -rf "$SOURCE_DIR" ;; *) echo 'refusing unsafe generated source path' >&2; exit 1 ;; esac
+	remove_generated_source
 fi
-[ -d "$SOURCE_DIR/.git" ] || git clone --depth=1 --branch "$OPENWRT_TAG" --no-checkout "$OPENWRT_SOURCE_URL" "$SOURCE_DIR"
-git -C "$SOURCE_DIR" fetch --depth=1 origin "refs/tags/$OPENWRT_TAG"
+if [ ! -d "$SOURCE_DIR/.git" ]; then
+	source_attempt=1
+	while ! git clone --depth=1 --branch "$OPENWRT_TAG" --no-checkout "$OPENWRT_SOURCE_URL" "$SOURCE_DIR"; do
+		remove_generated_source
+		[ "$source_attempt" -lt 3 ] || { echo 'OpenWrt source checkout failed after 3 attempts' >&2; exit 1; }
+		printf 'OpenWrt source checkout attempt %s failed; retrying the pinned repository\n' "$source_attempt" >&2
+		sleep "$source_attempt"
+		source_attempt=$((source_attempt + 1))
+	done
+fi
+source_attempt=1
+while ! git -C "$SOURCE_DIR" fetch --depth=1 origin "refs/tags/$OPENWRT_TAG"; do
+	[ "$source_attempt" -lt 3 ] || { echo 'OpenWrt pinned tag fetch failed after 3 attempts' >&2; exit 1; }
+	printf 'OpenWrt pinned tag fetch attempt %s failed; retrying\n' "$source_attempt" >&2
+	sleep "$source_attempt"
+	source_attempt=$((source_attempt + 1))
+done
 [ "$(git -C "$SOURCE_DIR" rev-parse 'FETCH_HEAD^{commit}')" = "$OPENWRT_COMMIT" ] || { echo 'OpenWrt tag did not resolve to the pinned commit' >&2; exit 1; }
 
 PATCH_SHA256=$(sha256sum "$PATCH_FILE" | awk '{print $1}')

@@ -12,6 +12,9 @@ APPSBL_READ_LENGTH=653422
 EXPECTED_ROOTFS_SIZE=0e800000
 EXPECTED_ERASE_SIZE=00020000
 EXPECTED_CFG_BAK_SIZE=00080000
+EXPECTED_SYSUPGRADE_SHA256=043e8dbb000658421c303db62c6be5196f211740a1646bb988fce79fbc722f34
+EXPECTED_PLATFORM_SHA256=af77cea58f86403363a13164c37926c0c1c3a451448688ce25629117f4d7d406
+EXPECTED_NAND_SHA256=150eb40ac1ae56ffe1d4fcb512a8e9c8a67e5d76c3bc56fb176832aeeda4e7c5
 OUTPUT=/tmp/companywrt-darkyun-preflight.env
 TEST_MODE=0
 TEST_SPEC=""
@@ -20,9 +23,10 @@ usage() {
 	cat <<'EOF'
 Usage: ax9000-darkyun-preflight.sh [--output /tmp/FILE]
 
-Checks the exact MIBIB and both APPSBL prefixes, MTD labels/sizes, kernel boot
-arguments, attached UBI MTD number and the kernel/rootfs/rootfs_data volumes.
-It writes a redacted evidence file and never changes router state.
+Checks the exact MIBIB and both APPSBL prefixes, the current KWRT sysupgrade
+stack, MTD labels/sizes, kernel boot arguments, attached UBI MTD number and the
+kernel/rootfs/rootfs_data volumes. It writes a redacted evidence file and never
+changes router state.
 
 --test-mode and --spec are reserved for isolated automated fixtures.
 EOF
@@ -75,6 +79,9 @@ PY
 	EXPECTED_ROOTFS_SIZE=$(json_get '.rootfs.size_hex' | sed 's/^0x//')
 	EXPECTED_ERASE_SIZE=$(json_get '.rootfs.erase_size_hex' | sed 's/^0x//')
 	EXPECTED_CFG_BAK_SIZE=$(json_get '.cfg_bak.size_hex' | sed 's/^0x//')
+	EXPECTED_SYSUPGRADE_SHA256=$(json_get '.migration_stack.sysupgrade_sha256')
+	EXPECTED_PLATFORM_SHA256=$(json_get '.migration_stack.platform_sha256')
+	EXPECTED_NAND_SHA256=$(json_get '.migration_stack.nand_sha256')
 else
 	[ -z "$TEST_SPEC" ] || { echo '--spec is forbidden outside test mode' >&2; exit 1; }
 	[ -z "$DEVICE_ROOT" ] || { echo 'COMPANYWRT_DEVICE_ROOT is test-only' >&2; exit 1; }
@@ -88,6 +95,20 @@ CMDLINE_FILE="$DEVICE_ROOT/proc/cmdline"
 [ -r "$CMDLINE_FILE" ] || { echo "cannot read $CMDLINE_FILE" >&2; exit 1; }
 command -v sha256sum >/dev/null 2>&1 || { echo 'sha256sum is required' >&2; exit 1; }
 command -v dd >/dev/null 2>&1 || { echo 'dd is required' >&2; exit 1; }
+
+file_digest() {
+	path=$1
+	description=$2
+	[ -r "$path" ] || { echo "cannot read $description: $path" >&2; exit 1; }
+	sha256sum "$path" | awk '{print $1}'
+}
+
+SYSUPGRADE_ACTUAL=$(file_digest "$DEVICE_ROOT/sbin/sysupgrade" sysupgrade)
+PLATFORM_ACTUAL=$(file_digest "$DEVICE_ROOT/lib/upgrade/platform.sh" 'platform upgrade script')
+NAND_ACTUAL=$(file_digest "$DEVICE_ROOT/lib/upgrade/nand.sh" 'NAND upgrade script')
+[ "$SYSUPGRADE_ACTUAL" = "$EXPECTED_SYSUPGRADE_SHA256" ] || { echo 'current sysupgrade fingerprint mismatch' >&2; exit 1; }
+[ "$PLATFORM_ACTUAL" = "$EXPECTED_PLATFORM_SHA256" ] || { echo 'current platform upgrade script fingerprint mismatch' >&2; exit 1; }
+[ "$NAND_ACTUAL" = "$EXPECTED_NAND_SHA256" ] || { echo 'current NAND upgrade script fingerprint mismatch' >&2; exit 1; }
 
 mtd_field() {
 	label=$1
@@ -182,6 +203,9 @@ umask 077
 	printf 'MIBIB_SHA256=%s\n' "$MIBIB_ACTUAL"
 	printf 'APPSBL_PRIMARY_SHA256=%s\n' "$APPSBL_ACTUAL"
 	printf 'APPSBL_SECONDARY_SHA256=%s\n' "$APPSBL_1_ACTUAL"
+	printf 'SYSUPGRADE_SHA256=%s\n' "$SYSUPGRADE_ACTUAL"
+	printf 'PLATFORM_UPGRADE_SHA256=%s\n' "$PLATFORM_ACTUAL"
+	printf 'NAND_UPGRADE_SHA256=%s\n' "$NAND_ACTUAL"
 	printf 'BOOT_ROOT=/dev/ubiblock0_1\n'
 } > "$OUTPUT"
 chmod 0600 "$OUTPUT"

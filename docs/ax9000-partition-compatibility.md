@@ -206,7 +206,9 @@ Web 页面字符串把 UI 项目链接到
 
 本机属于第二行：预检确认 `rootfs=mtd21`、`0x0e800000`、eraseblock `0x20000`，没有
 `ubi_kernel`，一个 UBI 内仅有 `kernel/rootfs/rootfs_data`；MIBIB 与两个 APPSBL 副本
-也都匹配。因此仓库不会尝试恢复标准分区，而是只构建专属单 UBI sysupgrade。
+也都匹配。当前 KWRT 的 `/sbin/sysupgrade`、`platform.sh` 和 `nand.sh` 也已固定 SHA256；
+一次迁移预检会拒绝任何脚本变化，避免升级 KWRT 后仍沿用旧放行结论。因此仓库不会
+尝试恢复标准分区，而是只构建专属单 UBI sysupgrade。
 
 “定制 DTS”与“恢复标准分区”是二选一的存储模型，不能只改镜像文件名或只替换一个
 `platform.sh`。前者必须让 Bootloader、live DTS、factory 格式和后续 sysupgrade 始终

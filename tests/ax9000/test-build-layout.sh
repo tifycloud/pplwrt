@@ -25,4 +25,5 @@ if "$ROOT/scripts/build-buildroot.sh" --channel stable --print-output > /dev/nul
 	echo 'stable output accepted a prerelease VERSION' >&2
 	exit 1
 fi
+grep -Fq 'OpenWrt source checkout failed after 3 attempts' "$ROOT/scripts/build-buildroot.sh"
 echo 'versioned rc/beta output resolution and stable version gate: ok'

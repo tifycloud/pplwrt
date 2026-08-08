@@ -37,6 +37,12 @@
     "read_length": 653422,
     "sha256": "80908e502add45ee6aa7ad83aa16ec2c3c8bf27b572ac0f9c3fe404b94fc0007"
   },
+  "migration_stack": {
+    "sysupgrade_sha256": "043e8dbb000658421c303db62c6be5196f211740a1646bb988fce79fbc722f34",
+    "platform_sha256": "af77cea58f86403363a13164c37926c0c1c3a451448688ce25629117f4d7d406",
+    "nand_sha256": "150eb40ac1ae56ffe1d4fcb512a8e9c8a67e5d76c3bc56fb176832aeeda4e7c5",
+    "behavior": "kwrt-single-ubi-rootfs-with-force-required"
+  },
   "boot": {
     "loader": "Darkyun U-Boot 23.01.10",
     "ubi_mtd": "rootfs",

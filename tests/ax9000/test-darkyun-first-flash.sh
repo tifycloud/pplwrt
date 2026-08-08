@@ -5,7 +5,8 @@ TMP=$(mktemp -d "${TMPDIR:-/tmp}/companywrt-first-flash.XXXXXX")
 trap 'rm -rf "$TMP"' EXIT INT TERM
 MOCK="$TMP/mock-bin"
 DEVICE="$TMP/device"
-mkdir -p "$MOCK" "$DEVICE/proc" "$DEVICE/dev" "$DEVICE/sys/class/ubi/ubi0" \
+mkdir -p "$MOCK" "$DEVICE/proc" "$DEVICE/dev" "$DEVICE/sbin" "$DEVICE/lib/upgrade" \
+	"$DEVICE/sys/class/ubi/ubi0" \
 	"$DEVICE/sys/class/ubi/ubi0_0" "$DEVICE/sys/class/ubi/ubi0_1" "$DEVICE/sys/class/ubi/ubi0_2"
 
 cat > "$DEVICE/proc/mtd" <<'EOF'
@@ -24,10 +25,16 @@ printf 'rootfs_data\n' > "$DEVICE/sys/class/ubi/ubi0_2/name"
 dd if=/dev/zero of="$DEVICE/dev/mtd1" bs=262144 count=1 2>/dev/null
 dd if=/dev/zero of="$DEVICE/dev/mtd15" bs=653422 count=1 2>/dev/null
 cp "$DEVICE/dev/mtd15" "$DEVICE/dev/mtd16"
+printf 'fixture sysupgrade\n' > "$DEVICE/sbin/sysupgrade"
+printf 'fixture platform upgrade\n' > "$DEVICE/lib/upgrade/platform.sh"
+printf 'fixture nand upgrade\n' > "$DEVICE/lib/upgrade/nand.sh"
 MIBIB_SHA=$(sha256sum "$DEVICE/dev/mtd1" | awk '{print $1}')
 APPSBL_SHA=$(sha256sum "$DEVICE/dev/mtd15" | awk '{print $1}')
+SYSUPGRADE_SHA=$(sha256sum "$DEVICE/sbin/sysupgrade" | awk '{print $1}')
+PLATFORM_SHA=$(sha256sum "$DEVICE/lib/upgrade/platform.sh" | awk '{print $1}')
+NAND_SHA=$(sha256sum "$DEVICE/lib/upgrade/nand.sh" | awk '{print $1}')
 cat > "$TMP/spec.json" <<EOF
-{"partition_variant":"darkyun-large-ubi-v1","rootfs":{"size_hex":"0x0e800000","erase_size_hex":"0x00020000"},"cfg_bak":{"size_hex":"0x00080000"},"mibib":{"read_length":262144,"sha256":"$MIBIB_SHA"},"appsbl":{"read_length":653422,"sha256":"$APPSBL_SHA"}}
+{"partition_variant":"darkyun-large-ubi-v1","rootfs":{"size_hex":"0x0e800000","erase_size_hex":"0x00020000"},"cfg_bak":{"size_hex":"0x00080000"},"mibib":{"read_length":262144,"sha256":"$MIBIB_SHA"},"appsbl":{"read_length":653422,"sha256":"$APPSBL_SHA"},"migration_stack":{"sysupgrade_sha256":"$SYSUPGRADE_SHA","platform_sha256":"$PLATFORM_SHA","nand_sha256":"$NAND_SHA"}}
 EOF
 
 cat > "$MOCK/id" <<'EOF'

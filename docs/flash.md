@@ -63,8 +63,9 @@ chmod 700 /tmp/ax9000-darkyun-preflight
 /tmp/ax9000-darkyun-preflight --output /tmp/companywrt-darkyun-preflight.env
 ```
 
-它只读取 MIBIB、两份 APPSBL、`/proc/mtd`、cmdline 和 UBI sysfs；三份二进制指纹、
-232 MiB rootfs、cfg_bak、擦除块及三个 UBI 卷必须全部吻合。输出 `RESULT=PASS` 仍只代表
+它只读取 MIBIB、两份 APPSBL、当前 `sysupgrade/platform/nand` 脚本、`/proc/mtd`、
+cmdline 和 UBI sysfs；Bootloader/升级栈指纹、232 MiB rootfs、cfg_bak、擦除块及三个
+UBI 卷必须全部吻合。输出 `RESULT=PASS` 仍只代表
 “硬件布局属于这个迁移目标”，不代表候选镜像已获准刷入。脚本不执行 flash、env、UCI、
 sysupgrade 或重启。
 

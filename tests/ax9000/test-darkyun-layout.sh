@@ -24,6 +24,9 @@ command -v jq >/dev/null 2>&1 || { echo 'jq is required' >&2; exit 1; }
 [ "$(jq -r '.live_validation.result' "$SPEC")" = PASS ]
 [ "$(jq -r '.live_validation.method' "$SPEC")" = read-only-ssh-preflight-v1 ]
 [ "$(jq -r '.live_validation.rootfs_mtd' "$SPEC")" = mtd21 ]
+[ "$(jq -r '.migration_stack.sysupgrade_sha256' "$SPEC")" = 043e8dbb000658421c303db62c6be5196f211740a1646bb988fce79fbc722f34 ]
+[ "$(jq -r '.migration_stack.platform_sha256' "$SPEC")" = af77cea58f86403363a13164c37926c0c1c3a451448688ce25629117f4d7d406 ]
+[ "$(jq -r '.migration_stack.nand_sha256' "$SPEC")" = 150eb40ac1ae56ffe1d4fcb512a8e9c8a67e5d76c3bc56fb176832aeeda4e7c5 ]
 
 grep -Fq 'compatible = "xiaomi,ax9000-darkyun", "xiaomi,ax9000", "qcom,ipq8074"' "$PATCH_FILE"
 grep -Fq 'label = "rootfs"' "$PATCH_FILE"
