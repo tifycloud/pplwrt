@@ -1,0 +1,157 @@
+diff --git a/package/boot/uboot-tools/uboot-envtools/files/qualcommax_ipq807x b/package/boot/uboot-tools/uboot-envtools/files/qualcommax_ipq807x
+index 46a7111c1be6511bff414ea3003075a675ea5a40..e7d86605af8d62bdfc39413992cdd7a97a1c14c3 100644
+--- a/package/boot/uboot-tools/uboot-envtools/files/qualcommax_ipq807x
++++ b/package/boot/uboot-tools/uboot-envtools/files/qualcommax_ipq807x
+@@ -51,7 +51,8 @@ prpl,haze)
+ 	;;
+ redmi,ax6|\
+ xiaomi,ax3600|\
+-xiaomi,ax9000)
++xiaomi,ax9000|\
++xiaomi,ax9000-darkyun)
+ 	ubootenv_add_mtd "0:appsblenv" "0x0" "0x10000" "0x20000"
+ 	ubootenv_add_sys_mtd "bdata" "0x0" "0x10000" "0x20000"
+ 	;;
+diff --git a/target/linux/qualcommax/files/arch/arm64/boot/dts/qcom/ipq8072-ax9000-darkyun.dts b/target/linux/qualcommax/files/arch/arm64/boot/dts/qcom/ipq8072-ax9000-darkyun.dts
+new file mode 100644
+index 0000000000000000000000000000000000000000..7bee998126d162e2cfbbbdffadfb29e981590cc5
+--- /dev/null
++++ b/target/linux/qualcommax/files/arch/arm64/boot/dts/qcom/ipq8072-ax9000-darkyun.dts
+@@ -0,0 +1,37 @@
++// SPDX-License-Identifier: GPL-2.0-or-later OR MIT
++/*
++ * Xiaomi AX9000 with Darkyun U-Boot single large-UBI layout.
++ *
++ * This deliberately inherits the upstream AX9000 hardware description and
++ * changes only the device identity, boot root volume and NAND tail layout.
++ */
++
++#include "ipq8072-ax9000.dts"
++
++/ {
++	model = "Xiaomi AX9000 (Darkyun Large UBI)";
++	compatible = "xiaomi,ax9000-darkyun", "xiaomi,ax9000", "qcom,ipq8074";
++
++	chosen {
++		bootargs-append = " root=/dev/ubiblock0_1";
++	};
++};
++
++&qpic_nand {
++	nand@0 {
++		partitions {
++			/delete-node/ partition@1180000;
++			/delete-node/ partition@4980000;
++
++			partition@1180000 {
++				label = "rootfs";
++				reg = <0x1180000 0xe800000>;
++			};
++
++			partition@f980000 {
++				label = "cfg_bak";
++				reg = <0xf980000 0x80000>;
++			};
++		};
++	};
++};
+diff --git a/target/linux/qualcommax/image/ipq807x.mk b/target/linux/qualcommax/image/ipq807x.mk
+index f356bbbca5230a0a949aee5e17413929e5baeca8..6e5e0cef62d7ae045ad22e15cfcbf74ba4680412 100644
+--- a/target/linux/qualcommax/image/ipq807x.mk
++++ b/target/linux/qualcommax/image/ipq807x.mk
+@@ -493,6 +493,26 @@ endif
+ endef
+ TARGET_DEVICES += xiaomi_ax9000
+ 
++define Device/xiaomi_ax9000_darkyun
++	$(call Device/FitImage)
++	KERNEL_IN_UBI := 1
++	DEVICE_VENDOR := Xiaomi
++	DEVICE_MODEL := AX9000
++	DEVICE_VARIANT := Darkyun Large UBI
++	DEVICE_DTS := ipq8072-ax9000-darkyun
++	BLOCKSIZE := 128k
++	PAGESIZE := 2048
++	DEVICE_DTS_CONFIG := config@hk14
++	SOC := ipq8072
++	KERNEL_SIZE := 57344k
++	SUPPORTED_DEVICES := xiaomi,ax9000-darkyun
++	DEVICE_COMPAT_VERSION := 2.0
++	DEVICE_COMPAT_MESSAGE := This image is only for the verified Darkyun single-UBI layout.
++	DEVICE_PACKAGES := ipq-wifi-xiaomi_ax9000 kmod-ath11k-pci ath11k-firmware-qcn9074 \
++		kmod-ath10k-ct ath10k-firmware-qca9887-ct
++endef
++TARGET_DEVICES += xiaomi_ax9000_darkyun
++
+ define Device/yuncore_ax880
+ 	$(call Device/FitImage)
+ 	$(call Device/UbiFit)
+diff --git a/target/linux/qualcommax/ipq807x/base-files/etc/board.d/01_leds b/target/linux/qualcommax/ipq807x/base-files/etc/board.d/01_leds
+index ae941657f94ea90cda81cf982dac9a67e2835b49..901b53662804e30ff33eab6d2cffc5657cb8690a 100644
+--- a/target/linux/qualcommax/ipq807x/base-files/etc/board.d/01_leds
++++ b/target/linux/qualcommax/ipq807x/base-files/etc/board.d/01_leds
+@@ -49,7 +49,8 @@ xiaomi,ax3600)
+ 	ucidef_set_led_netdev "lan3-port-link" "LAN3-PORT-LINK" "90000.mdio-1:04:green:lan" "lan3" "tx rx link_10 link_100 link_1000"
+ 	ucidef_set_led_netdev "wan" "WAN" "blue:network" "wan"
+ 	;;
+-xiaomi,ax9000)
++xiaomi,ax9000|\
++xiaomi,ax9000-darkyun)
+ 	ucidef_set_led_netdev "wan-port-link" "WAN-PORT-LINK" "90000.mdio-1:18:green:wan" "wan" "tx rx link_10 link_100 link_1000 link_2500"
+ 	ucidef_set_led_netdev "lan1-port-link" "LAN1-PORT-LINK" "90000.mdio-1:03:green:lan" "lan1" "tx rx link_10 link_100 link_1000"
+ 	ucidef_set_led_netdev "lan2-port-link" "LAN2-PORT-LINK" "90000.mdio-1:02:green:lan" "lan2" "tx rx link_10 link_100 link_1000"
+diff --git a/target/linux/qualcommax/ipq807x/base-files/etc/board.d/02_network b/target/linux/qualcommax/ipq807x/base-files/etc/board.d/02_network
+index 3c0e123141ac20b98c04692627adb098bbd229a3..70a92648a6b90b264adbec2013b8f7d30006163a 100644
+--- a/target/linux/qualcommax/ipq807x/base-files/etc/board.d/02_network
++++ b/target/linux/qualcommax/ipq807x/base-files/etc/board.d/02_network
+@@ -27,6 +27,7 @@ ipq807x_setup_interfaces()
+ 	linksys,mx5300|\
+ 	linksys,mx8500|\
+ 	xiaomi,ax9000|\
++	xiaomi,ax9000-darkyun|\
+ 	zbtlink,zbt-z800ax)
+ 		ucidef_set_interfaces_lan_wan "lan1 lan2 lan3 lan4" "wan"
+ 		;;
+diff --git a/target/linux/qualcommax/ipq807x/base-files/etc/hotplug.d/firmware/11-ath11k-caldata b/target/linux/qualcommax/ipq807x/base-files/etc/hotplug.d/firmware/11-ath11k-caldata
+index df4907c5174984364c9d41521737149a2b622a21..66d8c6dbad6ef87beb805ac1a3d64d97921f3a3b 100644
+--- a/target/linux/qualcommax/ipq807x/base-files/etc/hotplug.d/firmware/11-ath11k-caldata
++++ b/target/linux/qualcommax/ipq807x/base-files/etc/hotplug.d/firmware/11-ath11k-caldata
+@@ -33,6 +33,7 @@ case "$FIRMWARE" in
+ 	redmi,ax6|\
+ 	xiaomi,ax3600|\
+ 	xiaomi,ax9000|\
++	xiaomi,ax9000-darkyun|\
+ 	yuncore,ax880|\
+ 	zte,mf269)
+ 		caldata_extract "0:art" 0x1000 0x20000
+@@ -145,7 +146,8 @@ case "$FIRMWARE" in
+ 	prpl,haze)
+ 		caldata_extract_mmc "0:ART" 0x26800 0x20000
+ 		;;
+-	xiaomi,ax9000)
++	xiaomi,ax9000|\
++	xiaomi,ax9000-darkyun)
+ 		caldata_extract "0:art" 0x26800 0x20000
+ 		;;
+ 	esac
+diff --git a/target/linux/qualcommax/ipq807x/base-files/lib/upgrade/platform.sh b/target/linux/qualcommax/ipq807x/base-files/lib/upgrade/platform.sh
+index 1ddc73f09ec464b4fbeca05ece60ca44b1197cf6..e8d6f151ae175094afbe9d6c6031b553e709f4c5 100644
+--- a/target/linux/qualcommax/ipq807x/base-files/lib/upgrade/platform.sh
++++ b/target/linux/qualcommax/ipq807x/base-files/lib/upgrade/platform.sh
+@@ -257,6 +257,16 @@ platform_do_upgrade() {
+ 		CI_ROOT_UBIPART="rootfs"
+ 		nand_do_upgrade "$1"
+ 		;;
++	xiaomi,ax9000-darkyun)
++		# Darkyun U-Boot scans one 232 MiB UBI named rootfs. Keep kernel,
++		# rootfs and rootfs_data as volumes in that single MTD partition.
++		# Do not touch stock Xiaomi A/B flags: this bootloader does not use
++		# the upstream split ubi_kernel/rootfs topology.
++		CI_UBIPART="rootfs"
++		CI_KERNPART="kernel"
++		CI_ROOTPART="rootfs"
++		nand_do_upgrade "$1"
++		;;
+ 	spectrum,sax1v1k)
+ 		CI_KERNPART="0:HLOS"
+ 		CI_ROOTPART="rootfs"

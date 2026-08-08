@@ -42,7 +42,7 @@ if command -v ubus >/dev/null 2>&1 && command -v jsonfilter >/dev/null 2>&1; the
 		board=$(printf '%s\n' "$board_json" | jsonfilter -e '@.board_name' 2>/dev/null || true)
 		release=$(printf '%s\n' "$board_json" | jsonfilter -e '@.release.version' 2>/dev/null || true)
 		target=$(printf '%s\n' "$board_json" | jsonfilter -e '@.release.target' 2>/dev/null || true)
-		if [ "$board" = xiaomi,ax9000 ]; then pass 'board is xiaomi,ax9000'; else fail "board is '${board:-unknown}', expected xiaomi,ax9000"; fi
+		if [ "$board" = xiaomi,ax9000-darkyun ]; then pass 'board is xiaomi,ax9000-darkyun'; else fail "board is '${board:-unknown}', expected xiaomi,ax9000-darkyun"; fi
 		if [ "$target" = qualcommax/ipq807x ]; then pass 'target is qualcommax/ipq807x'; else fail "target is '${target:-unknown}', expected qualcommax/ipq807x"; fi
 		if printf '%s\n' "$release" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then pass "OpenWrt release metadata is $release"; else fail 'OpenWrt release metadata is missing/invalid'; fi
 	else
@@ -69,9 +69,13 @@ fi
 
 if [ -s "$BUILD_CONF" ]; then
 	profile=$(awk -F= '$1 == "PROFILE" { print $2; exit }' "$BUILD_CONF")
+	build_board=$(awk -F= '$1 == "BOARD" { print $2; exit }' "$BUILD_CONF")
+	partition_variant=$(awk -F= '$1 == "PARTITION_VARIANT" { print $2; exit }' "$BUILD_CONF")
 	build_release=$(awk -F= '$1 == "RELEASE" { print $2; exit }' "$BUILD_CONF")
 	channel=$(awk -F= '$1 == "CHANNEL" { print $2; exit }' "$BUILD_CONF")
-	if [ "$profile" = xiaomi_ax9000 ]; then pass 'image profile is xiaomi_ax9000'; else fail "image profile is '${profile:-missing}'"; fi
+	if [ "$profile" = xiaomi_ax9000_darkyun ]; then pass 'image profile is xiaomi_ax9000_darkyun'; else fail "image profile is '${profile:-missing}'"; fi
+	if [ -n "$board" ] && [ "$build_board" = "$board" ]; then pass "build board matches running board $board"; else fail "build board '${build_board:-missing}' does not match running board '${board:-unknown}'"; fi
+	if [ "$partition_variant" = darkyun-large-ubi-v1 ]; then pass 'partition variant is darkyun-large-ubi-v1'; else fail "partition variant is '${partition_variant:-missing}'"; fi
 	if [ -n "$release" ] && [ "$build_release" = "$release" ]; then
 		pass "build metadata release matches running OpenWrt $release"
 	else

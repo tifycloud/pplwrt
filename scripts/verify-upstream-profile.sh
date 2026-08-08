@@ -14,4 +14,4 @@ curl -fsSL "$BASE/sha256sums" -o "$TMP/sha256sums"
 IB=$(jq -r '.imagebuilder.filename' "$ROOT/devices/ax9000/profile.json")
 IBSHA=$(jq -r '.imagebuilder.sha256' "$ROOT/devices/ax9000/profile.json")
 awk -v sha="$IBSHA" -v name="*$IB" '$1 == sha && $2 == name {ok=1} END {exit !ok}' "$TMP/sha256sums"
-echo 'upstream profile and ImageBuilder checksum: ok'
+echo 'upstream standard-layout profile reference and ImageBuilder checksum: ok'

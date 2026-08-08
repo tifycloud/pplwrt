@@ -5,7 +5,7 @@ TMP=$(mktemp -d "${TMPDIR:-/tmp}/companywrt-inspector-test.XXXXXX")
 trap 'rm -rf "$TMP"' EXIT INT TERM
 MOCK="$TMP/mock-bin"
 FIXTURE_ROOT="$TMP/rootfs-fixture"
-ARCHIVE_ROOT="$TMP/archive/sysupgrade-xiaomi_ax9000"
+ARCHIVE_ROOT="$TMP/archive/sysupgrade-xiaomi_ax9000_darkyun"
 mkdir -p "$MOCK" "$FIXTURE_ROOT" "$ARCHIVE_ROOT"
 
 cat > "$MOCK/file" <<'EOF'
@@ -28,11 +28,42 @@ case "$1" in
 	*) exit 2 ;;
 esac
 EOF
-chmod 0755 "$MOCK/file" "$MOCK/unsquashfs"
+cat > "$MOCK/dumpimage" <<'EOF'
+#!/bin/sh
+set -eu
+if [ "$1" = -l ]; then
+	printf ' Image 0 (kernel-1)\n Image 1 (fdt-1)\n'
+	exit 0
+fi
+output=''
+while [ "$#" -gt 0 ]; do
+	case "$1" in
+		-o) output=$2; shift 2 ;;
+		*) shift ;;
+	esac
+done
+[ -n "$output" ] || exit 2
+printf 'fixture-dtb\n' > "$output"
+EOF
+cat > "$MOCK/dtc" <<'EOF'
+#!/bin/sh
+cat <<'DTS'
+/dts-v1/;
+/ {
+	model = "Xiaomi AX9000 (Darkyun Large UBI)";
+	compatible = "xiaomi,ax9000-darkyun", "xiaomi,ax9000", "qcom,ipq8074";
+	chosen { bootargs-append = " root=/dev/ubiblock0_1"; };
+	partition@1180000 { label = "rootfs"; reg = <0x1180000 0xe800000>; };
+	partition@f980000 { label = "cfg_bak"; reg = <0xf980000 0x80000>; };
+};
+DTS
+EOF
+chmod 0755 "$MOCK/file" "$MOCK/unsquashfs" "$MOCK/dumpimage" "$MOCK/dtc"
 export FIXTURE_ROOT
 
 required_paths='etc/companywrt/VERSION
 etc/companywrt/build.conf
+etc/companywrt/device-layout.json
 etc/companywrt/keys/release.pub
 etc/shadow
 etc/config/collectd
@@ -45,6 +76,7 @@ usr/share/company/ota-common.sh
 usr/share/company/ota-check
 usr/share/company/ota-apply
 usr/share/company/enrollment-preflight
+usr/share/company/ax9000-darkyun-preflight
 usr/share/company/LICENSE
 usr/share/company/NOTICE
 usr/share/company/CUSTOM-COMPONENTS.manifest
@@ -57,10 +89,13 @@ printf '%s\n' "$required_paths" | while IFS= read -r path; do
 done
 
 cp "$ROOT/VERSION" "$FIXTURE_ROOT/etc/companywrt/VERSION"
+cp "$ROOT/devices/ax9000/darkyun-large-ubi.json" "$FIXTURE_ROOT/etc/companywrt/device-layout.json"
 cp "$ROOT/keys/companywrt-release.pub" "$FIXTURE_ROOT/etc/companywrt/keys/release.pub"
 cp "$ROOT/CUSTOM-COMPONENTS.manifest" "$FIXTURE_ROOT/usr/share/company/CUSTOM-COMPONENTS.manifest"
 cat > "$FIXTURE_ROOT/etc/companywrt/build.conf" <<'EOF'
-PROFILE=xiaomi_ax9000
+PROFILE=xiaomi_ax9000_darkyun
+BOARD=xiaomi,ax9000-darkyun
+PARTITION_VARIANT=darkyun-large-ubi-v1
 RELEASE=25.12.5
 CHANNEL=rc
 EOF
@@ -96,7 +131,7 @@ config rule
 	option name Allow-ICMPv6-Forward
 EOF
 cat > "$FIXTURE_ROOT/etc/board.d/02_network" <<'EOF'
-xiaomi,ax9000)
+xiaomi,ax9000-darkyun)
 	ucidef_set_interfaces_lan_wan "lan1 lan2 lan3 lan4" "wan"
 EOF
 cat > "$FIXTURE_ROOT/bin/config_generate" <<'EOF'
@@ -123,9 +158,9 @@ EOF
 printf 'control\n' > "$ARCHIVE_ROOT/CONTROL"
 printf 'kernel\n' > "$ARCHIVE_ROOT/kernel"
 printf 'rootfs-placeholder\n' > "$ARCHIVE_ROOT/root"
-tar -cf "$TMP/firmware.bin" -C "$TMP/archive" sysupgrade-xiaomi_ax9000
+tar -cf "$TMP/firmware.bin" -C "$TMP/archive" sysupgrade-xiaomi_ax9000_darkyun
 
-PATH="$MOCK:$PATH" UNSQUASHFS="$MOCK/unsquashfs" "$ROOT/scripts/inspect-firmware.sh" \
+PATH="$MOCK:$PATH" UNSQUASHFS="$MOCK/unsquashfs" DUMPIMAGE="$MOCK/dumpimage" DTC="$MOCK/dtc" "$ROOT/scripts/inspect-firmware.sh" \
 	--image "$TMP/firmware.bin" --package-manifest "$TMP/PACKAGE-MANIFEST" \
 	--report "$TMP/locked.report" --embedded-key-id 444eb53ba66e6d45 \
 	--hardware-validation NOT_PERFORMED_RC_ONLY \
@@ -133,11 +168,43 @@ PATH="$MOCK:$PATH" UNSQUASHFS="$MOCK/unsquashfs" "$ROOT/scripts/inspect-firmware
 	--serial-evidence-id NONE --tested-firmware-sha256 NONE > "$TMP/locked.out"
 grep -qx 'root_password_state=LOCKED' "$TMP/locked.report"
 grep -qx 'default_password_embedded=NO' "$TMP/locked.report"
+grep -qx 'partition_variant=darkyun-large-ubi-v1' "$TMP/locked.report"
+grep -qx 'kernel_dtb_layout=PASS' "$TMP/locked.report"
+grep -qx 'openclash_preinstalled=NO' "$TMP/locked.report"
+grep -qx 'mihomo_preinstalled=NO' "$TMP/locked.report"
+
+printf 'luci-app-openclash - 0.47.0-r1\n' >> "$TMP/PACKAGE-MANIFEST"
+if PATH="$MOCK:$PATH" UNSQUASHFS="$MOCK/unsquashfs" DUMPIMAGE="$MOCK/dumpimage" DTC="$MOCK/dtc" "$ROOT/scripts/inspect-firmware.sh" \
+	--image "$TMP/firmware.bin" --package-manifest "$TMP/PACKAGE-MANIFEST" \
+	--report "$TMP/openclash-package.report" --embedded-key-id 444eb53ba66e6d45 \
+	--hardware-validation NOT_PERFORMED_RC_ONLY \
+	--production-gate-sha256 NONE --hardware-evidence-id NONE \
+	--serial-evidence-id NONE --tested-firmware-sha256 NONE > "$TMP/openclash-package.out" 2> "$TMP/openclash-package.err"; then
+	echo 'OpenClash package unexpectedly passed base firmware inspection' >&2
+	exit 1
+fi
+grep -q 'OpenClash or Mihomo' "$TMP/openclash-package.err"
+sed -i.bak '/^luci-app-openclash - /d' "$TMP/PACKAGE-MANIFEST"
+rm -f "$TMP/PACKAGE-MANIFEST.bak"
+
+mkdir -p "$FIXTURE_ROOT/etc/config"
+: > "$FIXTURE_ROOT/etc/config/openclash"
+if PATH="$MOCK:$PATH" UNSQUASHFS="$MOCK/unsquashfs" DUMPIMAGE="$MOCK/dumpimage" DTC="$MOCK/dtc" "$ROOT/scripts/inspect-firmware.sh" \
+	--image "$TMP/firmware.bin" --package-manifest "$TMP/PACKAGE-MANIFEST" \
+	--report "$TMP/openclash-rootfs.report" --embedded-key-id 444eb53ba66e6d45 \
+	--hardware-validation NOT_PERFORMED_RC_ONLY \
+	--production-gate-sha256 NONE --hardware-evidence-id NONE \
+	--serial-evidence-id NONE --tested-firmware-sha256 NONE > "$TMP/openclash-rootfs.out" 2> "$TMP/openclash-rootfs.err"; then
+	echo 'OpenClash rootfs payload unexpectedly passed base firmware inspection' >&2
+	exit 1
+fi
+grep -q 'payload unexpectedly embedded' "$TMP/openclash-rootfs.err"
+rm -f "$FIXTURE_ROOT/etc/config/openclash"
 
 cat > "$FIXTURE_ROOT/etc/shadow" <<'EOF'
 root::20000:0:99999:7:::
 EOF
-PATH="$MOCK:$PATH" UNSQUASHFS="$MOCK/unsquashfs" "$ROOT/scripts/inspect-firmware.sh" \
+PATH="$MOCK:$PATH" UNSQUASHFS="$MOCK/unsquashfs" DUMPIMAGE="$MOCK/dumpimage" DTC="$MOCK/dtc" "$ROOT/scripts/inspect-firmware.sh" \
 	--image "$TMP/firmware.bin" --package-manifest "$TMP/PACKAGE-MANIFEST" \
 	--report "$TMP/empty.report" --embedded-key-id 444eb53ba66e6d45 \
 	--hardware-validation NOT_PERFORMED_RC_ONLY \
@@ -146,7 +213,7 @@ PATH="$MOCK:$PATH" UNSQUASHFS="$MOCK/unsquashfs" "$ROOT/scripts/inspect-firmware
 grep -qx 'root_password_state=EMPTY' "$TMP/empty.report"
 
 IMAGE_SHA=$(sha256sum "$TMP/firmware.bin" | awk '{print $1}')
-PATH="$MOCK:$PATH" UNSQUASHFS="$MOCK/unsquashfs" "$ROOT/scripts/inspect-firmware.sh" \
+PATH="$MOCK:$PATH" UNSQUASHFS="$MOCK/unsquashfs" DUMPIMAGE="$MOCK/dumpimage" DTC="$MOCK/dtc" "$ROOT/scripts/inspect-firmware.sh" \
 	--image "$TMP/firmware.bin" --package-manifest "$TMP/PACKAGE-MANIFEST" \
 	--report "$TMP/stable.report" --embedded-key-id 444eb53ba66e6d45 \
 	--hardware-validation VERIFIED \
@@ -162,7 +229,7 @@ grep -qx "tested_firmware_sha256=$IMAGE_SHA" "$TMP/stable.report"
 cat > "$FIXTURE_ROOT/etc/shadow" <<'EOF'
 root:$6$fixture$preconfigured-hash:20000:0:99999:7:::
 EOF
-if PATH="$MOCK:$PATH" UNSQUASHFS="$MOCK/unsquashfs" "$ROOT/scripts/inspect-firmware.sh" \
+if PATH="$MOCK:$PATH" UNSQUASHFS="$MOCK/unsquashfs" DUMPIMAGE="$MOCK/dumpimage" DTC="$MOCK/dtc" "$ROOT/scripts/inspect-firmware.sh" \
 	--image "$TMP/firmware.bin" --package-manifest "$TMP/PACKAGE-MANIFEST" \
 	--report "$TMP/hash.report" --embedded-key-id 444eb53ba66e6d45 \
 	--hardware-validation NOT_PERFORMED_RC_ONLY \
@@ -180,7 +247,7 @@ fi
 cat > "$FIXTURE_ROOT/etc/shadow" <<'EOF'
 root:!$6$fixture$locked-but-preconfigured-hash:20000:0:99999:7:::
 EOF
-if PATH="$MOCK:$PATH" UNSQUASHFS="$MOCK/unsquashfs" "$ROOT/scripts/inspect-firmware.sh" \
+if PATH="$MOCK:$PATH" UNSQUASHFS="$MOCK/unsquashfs" DUMPIMAGE="$MOCK/dumpimage" DTC="$MOCK/dtc" "$ROOT/scripts/inspect-firmware.sh" \
 	--image "$TMP/firmware.bin" --package-manifest "$TMP/PACKAGE-MANIFEST" \
 	--report "$TMP/locked-hash.report" --embedded-key-id 444eb53ba66e6d45 \
 	--hardware-validation NOT_PERFORMED_RC_ONLY \

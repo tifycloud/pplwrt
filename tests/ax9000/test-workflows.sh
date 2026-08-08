@@ -25,7 +25,20 @@ grep -Fq '+refs/heads/main:refs/remotes/origin/main' "$RELEASE"
 grep -Fq "git cat-file -t \"refs/tags/\$GITHUB_REF_NAME\"" "$RELEASE"
 grep -q 'release tags must be annotated tag objects' "$RELEASE"
 grep -q 'must exactly equal the current protected origin/main HEAD' "$RELEASE"
-grep -q '^    environment: firmware-signing$' "$RELEASE"
+grep -q '^  sign:$' "$RELEASE"
+build_block=$(sed -n '/^  build:/,/^  sign:/p' "$RELEASE")
+sign_block=$(sed -n '/^  sign:/,/^  attest:/p' "$RELEASE")
+if printf '%s\n' "$build_block" | grep -Eq 'firmware-signing|secrets\.COMPANYWRT|USIGN_SECRET_KEY_FILE'; then
+	echo 'full Buildroot job can access release signing secrets' >&2
+	exit 1
+fi
+printf '%s\n' "$build_block" | grep -Fq -- '--compile-only'
+printf '%s\n' "$sign_block" | grep -q '^    environment: firmware-signing$'
+printf '%s\n' "$sign_block" | grep -Fq './scripts/sign-release-bundle.sh'
+if printf '%s\n' "$sign_block" | grep -Eq 'build-buildroot\.sh|make -C|make -j'; then
+	echo 'isolated signing job unexpectedly performs a firmware build' >&2
+	exit 1
+fi
 grep -q 'Materialize protected signing keys only after exact-main recheck' "$RELEASE"
 grep -q 'COMPANYWRT_USIGN_CURRENT_SECRET_KEY' "$RELEASE"
 authorize_line=$(grep -n 'Authorize exact protected main commit and annotated tag' "$RELEASE" | cut -d: -f1)
@@ -36,10 +49,16 @@ grep -Fq "production-gates/\$version.env" "$RELEASE"
 grep -q 'hardware_validation=NOT_PERFORMED_RC_ONLY' "$RELEASE"
 grep -q 'hardware_validation=VERIFIED' "$RELEASE"
 grep -q 'production_gate_sha256=' "$RELEASE"
-grep -q 'built firmware does not match the exact hardware-tested digest' "$ROOT/scripts/build-imagebuilder.sh"
+grep -q 'built firmware does not match the exact hardware-tested digest' "$ROOT/scripts/build-buildroot.sh"
+grep -q 'Build unsigned Darkyun large-UBI firmware from pinned OpenWrt source' "$RELEASE"
+grep -Fq -- '--profile xiaomi_ax9000_darkyun' "$RELEASE"
+if grep -Fq './scripts/build-imagebuilder.sh' "$RELEASE"; then
+	echo 'release workflow still invokes the incompatible standard ImageBuilder path' >&2
+	exit 1
+fi
 grep -q 'RELEASE-MANIFEST.next.sig' "$RELEASE"
 grep -q 'prerelease=(--prerelease)' "$RELEASE"
-grep -q 'needs: \[build, attest\]' "$RELEASE"
+grep -q 'needs: \[sign, attest\]' "$RELEASE"
 
 grep -q -- '--draft' "$RELEASE"
 grep -q -- '--draft=false' "$RELEASE"

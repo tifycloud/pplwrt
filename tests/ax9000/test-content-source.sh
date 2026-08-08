@@ -12,6 +12,12 @@ for package in sqm-scripts luci-app-sqm; do
 		exit 1
 	fi
 done
+for package in luci-app-openclash openclash mihomo; do
+	if grep -qx "$package" "$ROOT/configs/ax9000/packages.txt"; then
+		echo "OpenClash/Mihomo payload leaked into base: $package" >&2
+		exit 1
+	fi
+done
 grep -q 'mobile' "$ROOT/configs/overlay/usr/share/company/sqm-mobile-template"
 grep -Fq "disabled on \`unicom\`" "$ROOT/configs/overlay/usr/share/company/sqm-mobile-template"
 grep -q 'Plain syslog has no confidentiality' "$ROOT/configs/overlay/usr/share/company/log-forwarding-template"
@@ -28,19 +34,31 @@ done
 grep -q 'overlay-not-apk' "$ROOT/scripts/augment-sbom.py"
 grep -q 'companywrt:package-manifest-name' "$ROOT/scripts/augment-sbom.py"
 grep -q 'NOASSERTION' "$ROOT/scripts/augment-sbom.py"
-grep -q -- '--package-manifest' "$ROOT/scripts/build-imagebuilder.sh"
-grep -q 'current ImageBuilder pipeline does not compile or install them as APKs' "$ROOT/NOTICE"
+grep -q -- '--package-manifest' "$ROOT/scripts/build-buildroot.sh"
+grep -q 'current Buildroot pipeline does not compile or install them as APKs' "$ROOT/NOTICE"
 grep -Fq 'THE SOFTWARE IS PROVIDED "AS IS"' "$ROOT/LICENSE"
-grep -Fq "packages/\$package/root" "$ROOT/scripts/build-imagebuilder.sh"
-grep -q 'CURRENT_PUBLIC_KEY' "$ROOT/scripts/build-imagebuilder.sh"
-grep -q 'inspect-firmware.sh' "$ROOT/scripts/build-imagebuilder.sh"
-grep -Fq 'profiles.json must identify exactly one squashfs sysupgrade image' "$ROOT/scripts/build-imagebuilder.sh"
+grep -Fq "packages/\$package/root" "$ROOT/scripts/build-buildroot.sh"
+grep -q 'CURRENT_PUBLIC_KEY' "$ROOT/scripts/build-buildroot.sh"
+grep -q 'inspect-firmware.sh' "$ROOT/scripts/build-buildroot.sh"
+grep -Fq "Buildroot must produce exactly one host \$tool_name inspector binary" "$ROOT/scripts/build-buildroot.sh"
+grep -Fq "resolve_single_inspector_tool dumpimage '*/host/u-boot-*/tools/dumpimage'" "$ROOT/scripts/build-buildroot.sh"
+grep -Fq "resolve_single_inspector_tool dtc '*/linux-*/scripts/dtc/dtc'" "$ROOT/scripts/build-buildroot.sh"
+grep -Fq "resolve_single_inspector_tool unsquashfs '*/host/squashfs4-*/squashfs-tools/unsquashfs'" "$ROOT/scripts/build-buildroot.sh"
+grep -Fq -- "-C \"\$SOURCE_DIR/staging_dir/host\" bin/usign" "$ROOT/scripts/build-buildroot.sh"
+if grep -Fq 'bin/.usign.bin' "$ROOT/scripts/build-buildroot.sh"; then
+	echo 'compile bundle must not assume an optional .usign.bin wrapper' >&2
+	exit 1
+fi
+grep -Fq 'profiles.json must identify exactly one squashfs sysupgrade image' "$ROOT/scripts/build-buildroot.sh"
+grep -Fq 'full-openwrt-buildroot' "$ROOT/scripts/build-buildroot.sh"
+grep -Fq '0001-qualcommax-add-ax9000-darkyun-large-ubi.patch' "$ROOT/scripts/build-buildroot.sh"
 grep -Fq 'host Finder metadata leaked into the firmware rootfs' "$ROOT/scripts/inspect-firmware.sh"
 grep -Fq 'rootfs contains a preconfigured root password hash' "$ROOT/scripts/inspect-firmware.sh"
 grep -Fq 'root_password_state=' "$ROOT/scripts/inspect-firmware.sh"
 grep -Fq 'loopback_dsa_wan6_generation=PRESERVED' "$ROOT/scripts/inspect-firmware.sh"
 grep -Fq 'default_firewall_rules=PRESERVED' "$ROOT/scripts/inspect-firmware.sh"
-grep -Fq 'refusing to bind a dirty worktree to a release source commit' "$ROOT/scripts/build-imagebuilder.sh"
+grep -Fq 'openclash_preinstalled=NO' "$ROOT/scripts/inspect-firmware.sh"
+grep -Fq 'refusing to bind a dirty worktree to a release source commit' "$ROOT/scripts/build-buildroot.sh"
 grep -Fq 'ignored files exist in firmware input directories' "$ROOT/scripts/build-in-container.sh"
 
 [ -s "$ROOT/keys/companywrt-release.pub" ]

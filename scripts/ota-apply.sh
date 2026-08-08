@@ -27,7 +27,8 @@ PRODUCTION TRUST ANCHOR IS FIXED:
   with --test-mode, COMPANYWRT_OTA_TEST_MODE=1 and a temporary
   COMPANYWRT_DEVICE_ROOT. This escape hatch exists solely for automated tests.
 
-This command requires root and a real xiaomi,ax9000. It re-downloads/copies and
+This command requires root and a running xiaomi,ax9000-darkyun CompanyWrt. It
+re-downloads/copies and
 re-verifies the manifest, usign signature/key id, image size/SHA, profile,
 board, OpenWrt release, installed build metadata, expected version/channel and
 both administrator confirmations. It runs only `sysupgrade -T`; final flashing
@@ -108,8 +109,8 @@ ota_stage_and_verify "$MANIFEST" "$SIGNATURE" "$IMAGE" "$PUBLIC_KEY" "$WORK_DIR"
 [ "$OTA_CHANNEL" = "$EXPECTED_CHANNEL" ] || ota_die "candidate channel does not match administrator expectation"
 [ "$OTA_VERSION" = "$CONFIRM_VERSION" ] || ota_die "candidate version changed after confirmation"
 [ "$OTA_SHA256" = "$CONFIRM_SHA256" ] || ota_die "candidate SHA256 does not match second confirmation"
-[ "$OTA_PROFILE" = xiaomi_ax9000 ] || ota_die "unsupported candidate profile: $OTA_PROFILE"
-[ "$OTA_BOARD" = xiaomi,ax9000 ] || ota_die "unsupported candidate board: $OTA_BOARD"
+[ "$OTA_PROFILE" = xiaomi_ax9000_darkyun ] || ota_die "unsupported candidate profile: $OTA_PROFILE"
+[ "$OTA_BOARD" = xiaomi,ax9000-darkyun ] || ota_die "unsupported candidate board: $OTA_BOARD"
 
 command -v ubus >/dev/null 2>&1 || ota_die "ubus is required on the target router"
 command -v jsonfilter >/dev/null 2>&1 || ota_die "jsonfilter is required on the target router"
@@ -126,9 +127,13 @@ INSTALLED_VERSION_FILE="$DEVICE_ROOT/etc/companywrt/VERSION"
 [ -s "$BUILD_CONF" ] || ota_die "installed build metadata is missing: $BUILD_CONF"
 [ -s "$INSTALLED_VERSION_FILE" ] || ota_die "installed version is missing: $INSTALLED_VERSION_FILE"
 installed_profile=$(awk -F= '$1 == "PROFILE" { print $2; exit }' "$BUILD_CONF")
+installed_board=$(awk -F= '$1 == "BOARD" { print $2; exit }' "$BUILD_CONF")
+installed_partition_variant=$(awk -F= '$1 == "PARTITION_VARIANT" { print $2; exit }' "$BUILD_CONF")
 installed_channel=$(awk -F= '$1 == "CHANNEL" { print $2; exit }' "$BUILD_CONF")
 installed_version=$(sed -n '1p' "$INSTALLED_VERSION_FILE")
 [ "$installed_profile" = "$OTA_PROFILE" ] || ota_die "installed profile does not match candidate profile"
+[ "$installed_board" = "$OTA_BOARD" ] || ota_die "installed build board does not match candidate board"
+[ "$installed_partition_variant" = "$OTA_PARTITION_VARIANT" ] || ota_die "installed partition variant does not match candidate"
 case "$installed_channel" in rc|beta|stable) ;; *) ota_die "installed channel metadata is invalid" ;; esac
 printf '%s\n' "$installed_version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+-company\.[0-9]+(-(rc|beta)[1-9][0-9]*)?$' || ota_die "installed version metadata is invalid"
 [ "$installed_version" != "$OTA_VERSION" ] || ota_die "refusing an unreviewed reinstall of the currently installed version"
@@ -168,7 +173,7 @@ printf 'Running read-only platform validation: sysupgrade -T %s\n' "$OTA_IMAGE"
 sysupgrade -T "$OTA_STAGED_IMAGE" || ota_die "sysupgrade -T rejected the image"
 
 printf '\nSIGNED OTA CANDIDATE PASSED ALL AUTOMATED CHECKS\n'
-printf 'Installed: VERSION=%s CHANNEL=%s PROFILE=%s BOARD=%s\n' "$installed_version" "$installed_channel" "$installed_profile" "$device_board"
+printf 'Installed: VERSION=%s CHANNEL=%s PROFILE=%s BOARD=%s PARTITION=%s\n' "$installed_version" "$installed_channel" "$installed_profile" "$device_board" "$installed_partition_variant"
 printf 'Candidate: VERSION=%s CHANNEL=%s SHA256=%s SIZE=%s\n' "$OTA_VERSION" "$OTA_CHANNEL" "$OTA_SHA256" "$OTA_SIZE"
 printf 'No flash was performed. Back up configuration/logs, verify boot slot and recovery evidence, then make a separate on-site decision.\n'
 printf "Final manual command (NOT executed): sysupgrade '%s'\n" "$OTA_STAGED_IMAGE"

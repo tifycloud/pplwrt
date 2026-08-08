@@ -1,4 +1,4 @@
-# Official ImageBuilder package names. One package per line; comments ignored.
+# Official OpenWrt package names selected by the full Buildroot config.
 luci-base
 luci-mod-admin-full
 luci-ssl-openssl

@@ -10,13 +10,13 @@ mkdir -p "$MOCK" "$DEVICE/etc/companywrt" "$DEVICE/overlay" "$DEVICE/tmp"
 cat > "$MOCK/ubus" <<'EOF'
 #!/bin/sh
 [ "$*" = 'call system board' ] || exit 1
-echo '{"board_name":"xiaomi,ax9000","release":{"version":"25.12.5","target":"qualcommax/ipq807x"}}'
+echo '{"board_name":"xiaomi,ax9000-darkyun","release":{"version":"25.12.5","target":"qualcommax/ipq807x"}}'
 EOF
 cat > "$MOCK/jsonfilter" <<'EOF'
 #!/bin/sh
 [ "$1" = -e ] || exit 2
 case "$2" in
-	@.board_name) echo xiaomi,ax9000 ;;
+	@.board_name) echo xiaomi,ax9000-darkyun ;;
 	@.release.version) echo 25.12.5 ;;
 	@.release.target) echo qualcommax/ipq807x ;;
 	*) exit 1 ;;
@@ -46,7 +46,9 @@ EOF
 chmod 0755 "$MOCK"/*
 
 cat > "$DEVICE/etc/companywrt/build.conf" <<'EOF'
-PROFILE=xiaomi_ax9000
+PROFILE=xiaomi_ax9000_darkyun
+BOARD=xiaomi,ax9000-darkyun
+PARTITION_VARIANT=darkyun-large-ubi-v1
 RELEASE=25.12.5
 CHANNEL=rc
 EOF
@@ -57,7 +59,8 @@ EOF
 
 PATH="$MOCK:$PATH" COMPANYWRT_DEVICE_ROOT="$DEVICE" "$ROOT/scripts/enrollment-preflight.sh" \
 	--expected-version 25.12.5-company.2-rc1 > "$TMP/pass.out"
-grep -q 'PASS  board is xiaomi,ax9000' "$TMP/pass.out"
+grep -q 'PASS  board is xiaomi,ax9000-darkyun' "$TMP/pass.out"
+grep -q 'PASS  partition variant is darkyun-large-ubi-v1' "$TMP/pass.out"
 grep -q 'PASS  HTTP requests are configured to redirect to HTTPS' "$TMP/pass.out"
 grep -q 'PASS  WAN input policy is REJECT' "$TMP/pass.out"
 grep -q 'build metadata release matches running OpenWrt 25.12.5' "$TMP/pass.out"

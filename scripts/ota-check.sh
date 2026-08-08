@@ -18,8 +18,8 @@ Options:
   --public-key FILE            Trusted usign public key
   --download-dir DIR           Preserve verified bundle here
   --version VERSION            Require exact candidate version
-  --profile PROFILE            Require exact profile (default xiaomi_ax9000)
-  --board BOARD                Require exact board (default xiaomi,ax9000)
+  --profile PROFILE            Require exact profile (default xiaomi_ax9000_darkyun)
+  --board BOARD                Require exact board (default xiaomi,ax9000-darkyun)
   --channel rc|beta|stable     Require exact release channel
 
 Remote inputs are HTTPS-only. The manifest schema, usign signature/key id,
@@ -35,8 +35,8 @@ IMAGE=""
 PUBLIC_KEY="/etc/companywrt/keys/release.pub"
 DOWNLOAD_DIR=""
 EXPECTED_VERSION=""
-EXPECTED_PROFILE="xiaomi_ax9000"
-EXPECTED_BOARD="xiaomi,ax9000"
+EXPECTED_PROFILE="xiaomi_ax9000_darkyun"
+EXPECTED_BOARD="xiaomi,ax9000-darkyun"
 EXPECTED_CHANNEL=""
 
 while [ "$#" -gt 0 ]; do
@@ -75,6 +75,9 @@ ota_stage_and_verify "$MANIFEST" "$SIGNATURE" "$IMAGE" "$PUBLIC_KEY" "$DOWNLOAD_
 printf 'VERIFIED_VERSION=%s\n' "$OTA_VERSION"
 printf 'VERIFIED_PROFILE=%s\n' "$OTA_PROFILE"
 printf 'VERIFIED_BOARD=%s\n' "$OTA_BOARD"
+printf 'VERIFIED_PARTITION_VARIANT=%s\n' "$OTA_PARTITION_VARIANT"
+printf 'VERIFIED_MIBIB_SHA256=%s\n' "$OTA_MIBIB_SHA256"
+printf 'VERIFIED_APPSBL_SHA256=%s\n' "$OTA_APPSBL_SHA256"
 printf 'VERIFIED_CHANNEL=%s\n' "$OTA_CHANNEL"
 printf 'VERIFIED_IMAGE=%s\n' "$OTA_STAGED_IMAGE"
 printf 'VERIFIED_SHA256=%s\n' "$OTA_SHA256"

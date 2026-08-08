@@ -1,6 +1,8 @@
 # 官方、USTC、TUNA 源与恢复
 
-默认 feeds 固定为官方 25.12.5 目录；ImageBuilder 的 `repositories` 文件记录了 target、base、luci、routing 等 APK 索引。USTC 和 TUNA 只作为网络不可达时的恢复路径：
+构建时使用 OpenWrt 25.12.5 `feeds.conf.default` 中已固定 commit 的 packages、LuCI、
+routing、telephony、video 源；运行时 APK 仓库仍固定官方 25.12.5 target/base/LuCI/routing
+等索引。USTC 和 TUNA 只作为设备侧网络不可达时的恢复路径：
 
 ```text
 official https://downloads.openwrt.org/releases/25.12.5

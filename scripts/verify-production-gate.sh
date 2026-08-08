@@ -15,6 +15,7 @@ value() {
 awk -F= '
 	BEGIN {
 		allowed["APPROVED_FOR_STABLE"] = allowed["VERSION"] = allowed["BOARD"] = 1
+		allowed["PARTITION_VARIANT"] = allowed["MIBIB_SHA256"] = allowed["APPSBL_SHA256"] = 1
 		allowed["HARDWARE_VARIANT"] = allowed["HARDWARE_EVIDENCE_ID"] = allowed["SERIAL_EVIDENCE_ID"] = 1
 		allowed["SECURE_BOOT_STATE"] = allowed["BOOT_SLOT"] = allowed["MTD_LAYOUT"] = 1
 		allowed["MTD_EVIDENCE_SHA256"] = allowed["TEST_LOG_SHA256"] = allowed["FIRMWARE_SHA256"] = 1
@@ -31,7 +32,10 @@ awk -F= '
 
 [ "$(value APPROVED_FOR_STABLE)" = YES ] || { echo 'APPROVED_FOR_STABLE=YES is required' >&2; exit 1; }
 [ "$(value VERSION)" = "$EXPECTED_VERSION" ] || { echo 'production evidence VERSION mismatch' >&2; exit 1; }
-[ "$(value BOARD)" = xiaomi,ax9000 ] || { echo 'production evidence BOARD mismatch' >&2; exit 1; }
+[ "$(value BOARD)" = xiaomi,ax9000-darkyun ] || { echo 'production evidence BOARD mismatch' >&2; exit 1; }
+[ "$(value PARTITION_VARIANT)" = darkyun-large-ubi-v1 ] || { echo 'production evidence PARTITION_VARIANT mismatch' >&2; exit 1; }
+[ "$(value MIBIB_SHA256)" = 2d79c1b15b8946af733dba5fff5e33bf3ba18863ed734710bd2a5e48fc469c11 ] || { echo 'production evidence MIBIB fingerprint mismatch' >&2; exit 1; }
+[ "$(value APPSBL_SHA256)" = 80908e502add45ee6aa7ad83aa16ec2c3c8bf27b572ac0f9c3fe404b94fc0007 ] || { echo 'production evidence APPSBL fingerprint mismatch' >&2; exit 1; }
 for key in RESCUE POWER_LOSS HE80 DUAL_WAN IPV6 VLAN WIREGUARD PBR OPENCLASH OTA HTTPS WAN_FIREWALL; do
 	[ "$(value "$key")" = PASS ] || { echo "$key=PASS is required for stable" >&2; exit 1; }
 done

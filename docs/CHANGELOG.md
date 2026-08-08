@@ -3,12 +3,26 @@
 ## 25.12.5-company.2-rc2 — 2026-08-08
 
 **Release candidate / NOT PRODUCTION.** 仍无 AX9000 真机 production-gate 证据；本轮只加固
-静态、构建、签名与发布门禁，不创建 stable tag。
+静态、构建、签名与发布门禁，不创建 stable tag。RC2 尚未发布，随后根据实机证据把
+构建目标改为暗云 Boot 单 UBI 专属变体。
+
+- 真机只读确认 MIBIB 为 `rootfs=0x01180000+0x0e800000`，两个 APPSBL 指纹一致，运行时
+  为单 UBI `kernel/rootfs/rootfs_data`；历史标准布局 RC 明确禁止刷入。
+- 从官方 ImageBuilder 切换为固定 OpenWrt 25.12.5/feeds commit 的完整 Buildroot；新增
+  `xiaomi_ax9000_darkyun` DTS/profile/board/upgrade patch，不生成 factory 镜像。
+- 新增 MIBIB/APPSBL/MTD offset/UBI 只读迁移 preflight，并固定当前 KWRT
+  `sysupgrade/platform/nand` 三份脚本指纹；release manifest、OTA、production gate 绑定
+  专属 board、partition variant 和 bootloader 指纹。
+- inspector 从 sysupgrade FIT 提取 DTB，拒绝 `ubi_kernel`，要求 232 MiB rootfs、cfg_bak、
+  `/dev/ubiblock0_1` 与专属 compatible 全部吻合。
 
 - 发布必须使用 annotated `v$VERSION` tag，且 peeled commit 与实时拉取的受保护
   `origin/main` HEAD 精确相等；签名 job 绑定 `firmware-signing` environment（审批、冷却、
   仅 `main` branch/`v*` tag policy）。active tag ruleset 禁止 `v*` 删除/非 fast-forward，
   仍允许合法新 RC tag。
+- 完整 OpenWrt Buildroot/inspector 在无 secret job 中完成；unsigned bundle 先封存
+  SHA256SUMS。隔离签名 job 重新核验 protected main、source commit、内容报告和真机状态，
+  只生成 manifest/签名，不调用编译器、make 或下载步骤。
 - 开启 GitHub 原生 immutable releases；先上传完整 draft 再发布，发布后逐资产比对 digest，
   并验证 GitHub release attestation 和每个本地资产。
 - 完成 RC1→RC2 显式 usign 轮换：旧 key 主签保证 RC1 可升级，新 key 共签并嵌入 RC2；
@@ -18,7 +32,7 @@
 - RC 证据状态固定为 `NOT_PERFORMED_RC_ONLY`。stable 构建必须读取且验证精确 gate 文件，
   把 `VERIFIED`、gate SHA、opaque hardware/serial evidence IDs 和被测固件 SHA 写入
   BUILD-METADATA、内容报告与严格 v2 release manifest，并要求构建 SHA 精确相等。
-- CycloneDX 以构建出的 251 个唯一 PACKAGE-MANIFEST 包为基准建立一一上游组件映射；
+- CycloneDX 以暗云大分区目标构建出的 252 个唯一 PACKAGE-MANIFEST 包为基准建立一一上游组件映射；
   补齐 `libnghttp2-14` 缺项。无法从上游 SBOM 证明的许可证写 `NOASSERTION`，不宣称
   完整许可证结论。
 - network plan 对 domain 大小写、IPv4 `/32`、CIDR host bits、单端口范围做规范化，拒绝
