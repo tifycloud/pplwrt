@@ -55,7 +55,8 @@ artifacts/beta/25.12.5-company.2-beta1/  # 仅 -betaN VERSION 的显式 beta 构
    `CONFIG_LUCI_LANG_zh_Hans` 生成的 Base、PBR、防火墙和软件包管理器中文包；缺失组件补成
    `NOASSERTION`，custom overlay 进入 CUSTOM-COMPONENTS、NOTICE 和 MIT LICENSE；
 7. 无密钥编译目录先以 SHA256SUMS 封存；隔离签名 job 重新绑定 commit/内容报告/真机
-   evidence，只运行固定 host usign，不运行 make、编译器或网络下载；
+   evidence，只携带并运行固定 Buildroot 的最小 host `usign` 可执行文件，不运行 make、编译器
+   或网络下载；
 8. 私钥与公钥指纹一致后签署 RELEASE-MANIFEST，并用公钥回验；
 9. 所有 release 文件生成 SHA256SUMS 并立即回验。
 

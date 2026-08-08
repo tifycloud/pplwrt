@@ -457,7 +457,7 @@ UNSQUASHFS="$HOST_UNSQUASHFS" \
 	--tested-firmware-sha256 "$TESTED_FIRMWARE_SHA256"
 
 tar --zstd -cf "$OUTPUT_WORK/BUILD-HOST-USIGN.tar.zst" \
-	-C "$SOURCE_DIR/staging_dir/host" bin/usign bin/.usign.bin lib
+	-C "$SOURCE_DIR/staging_dir/host" bin/usign
 {
 	printf 'UNSIGNED DEVELOPMENT PREFLIGHT ONLY\n'
 	printf 'This directory is not a release bundle and must not be flashed.\n'

@@ -44,6 +44,11 @@ grep -Fq "Buildroot must produce exactly one host \$tool_name inspector binary" 
 grep -Fq "resolve_single_inspector_tool dumpimage '*/host/u-boot-*/tools/dumpimage'" "$ROOT/scripts/build-buildroot.sh"
 grep -Fq "resolve_single_inspector_tool dtc '*/linux-*/scripts/dtc/dtc'" "$ROOT/scripts/build-buildroot.sh"
 grep -Fq "resolve_single_inspector_tool unsquashfs '*/host/squashfs4-*/squashfs-tools/unsquashfs'" "$ROOT/scripts/build-buildroot.sh"
+grep -Fq -- "-C \"\$SOURCE_DIR/staging_dir/host\" bin/usign" "$ROOT/scripts/build-buildroot.sh"
+if grep -Fq 'bin/.usign.bin' "$ROOT/scripts/build-buildroot.sh"; then
+	echo 'compile bundle must not assume an optional .usign.bin wrapper' >&2
+	exit 1
+fi
 grep -Fq 'profiles.json must identify exactly one squashfs sysupgrade image' "$ROOT/scripts/build-buildroot.sh"
 grep -Fq 'full-openwrt-buildroot' "$ROOT/scripts/build-buildroot.sh"
 grep -Fq '0001-qualcommax-add-ax9000-darkyun-large-ubi.patch' "$ROOT/scripts/build-buildroot.sh"
