@@ -1,0 +1,24 @@
+name: CompanyWrt checks
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Shell and metadata checks
+        run: |
+          set -eu
+          ./scripts/verify-shell.sh
+          tests/ax9000/test-profile.sh
+          tests/ax9000/test-network-generator.sh
+          tests/ax9000/test-ota.sh
+          tests/ax9000/test-ui.sh
+          test "$(cat VERSION)" = '25.12.5-company.1'

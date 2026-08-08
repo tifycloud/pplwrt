@@ -1,0 +1,9 @@
+{
+  "luci-app-company": {
+    "description": "CompanyWrt read-only dashboard",
+    "read": {
+      "uci": ["company"],
+      "ubus": {}
+    }
+  }
+}

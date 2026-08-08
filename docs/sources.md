@@ -1,0 +1,14 @@
+# 一手来源与固定证据
+
+以下 URL 是构建/审计使用的一手来源，访问时间为 2026-08-08（服务器目录显示 25.12.5，发布日期 2026-07-01）：
+
+- [OpenWrt 25.12.5 release notes](https://openwrt.org/releases/25.12/notes-25.12.5)
+- [qualcommax/ipq807x 25.12.5 目录（ImageBuilder、sha256sums、profiles.json、AX9000 镜像）](https://downloads.openwrt.org/releases/25.12.5/targets/qualcommax/ipq807x/)
+- [官方 profiles.json](https://downloads.openwrt.org/releases/25.12.5/targets/qualcommax/ipq807x/profiles.json)
+- [官方 sha256sums](https://downloads.openwrt.org/releases/25.12.5/targets/qualcommax/ipq807x/sha256sums)
+- [OpenWrt ImageBuilder 使用说明](https://openwrt.org/docs/guide-user/additional-software/imagebuilder)
+- [OpenClash README（依赖列表）](https://github.com/vernesong/OpenClash/blob/master/README.md)
+- [OpenClash Makefile（当前包依赖）](https://raw.githubusercontent.com/vernesong/OpenClash/master/luci-app-openclash/Makefile)
+- [OpenClash 用户指南](https://github.com/vernesong/OpenClash/blob/dev/.github/skills/openclash-user-guide/SKILL.md)
+
+25.12.5 `profiles.json` 的 `xiaomi_ax9000` 条目给出 `supported_devices: ["xiaomi,ax9000"]`、设备包 `ipq-wifi-xiaomi_ax9000 kmod-ath11k-pci ath11k-firmware-qcn9074 kmod-ath10k-ct ath10k-firmware-qca9887-ct`，以及本文 `devices/ax9000/profile.json` 中的四个官方镜像 SHA256。该条目而非文件名猜测是接受 profile 的依据。

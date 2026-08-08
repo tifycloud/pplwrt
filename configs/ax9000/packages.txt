@@ -1,0 +1,24 @@
+# Official ImageBuilder package names. One package per line; comments ignored.
+luci-base
+luci-mod-admin-full
+luci-ssl-openssl
+luci-i18n-base-zh-cn
+luci-theme-openwrt
+luci-theme-openwrt-2020
+uhttpd-mod-ubus
+rpcd-mod-rrdns
+pbr
+luci-app-pbr
+kmod-nft-tproxy
+kmod-tun
+kmod-inet-diag
+luci-compat
+# OpenClash official dependencies only; plugin/core/subscription remain separate.
+dnsmasq-full
+bash
+curl
+ca-bundle
+ip-full
+ruby
+ruby-yaml
+unzip

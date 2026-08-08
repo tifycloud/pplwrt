@@ -1,0 +1,2 @@
+CompanyWrt visual assets. luci-app-company loads the stylesheet explicitly;
+the official LuCI rescue theme remains the default recovery path.

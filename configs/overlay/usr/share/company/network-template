@@ -1,0 +1,7 @@
+# Generate a reviewable enterprise network configuration:
+#   company-network generate --wan1 eth0.2 --wan2 eth0.3 --output /tmp/cw
+# Apply only after review and backup:
+#   company-network apply --wan1 eth0.2 --wan2 eth0.3 --yes
+#
+# PBR is policy based, not automatic load balancing. Add source/destination/
+# port rules deliberately and reserve fwmark/table IDs away from OpenClash.

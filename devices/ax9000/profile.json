@@ -1,0 +1,43 @@
+{
+  "release": "25.12.5",
+  "target": "qualcommax/ipq807x",
+  "profile": "xiaomi_ax9000",
+  "supported_devices": ["xiaomi,ax9000"],
+  "vendor": "Xiaomi",
+  "model": "AX9000",
+  "image_prefix": "openwrt-25.12.5-qualcommax-ipq807x-xiaomi_ax9000",
+  "official_profile_source": "https://downloads.openwrt.org/releases/25.12.5/targets/qualcommax/ipq807x/profiles.json",
+  "imagebuilder": {
+    "filename": "openwrt-imagebuilder-25.12.5-qualcommax-ipq807x.Linux-x86_64.tar.zst",
+    "sha256": "81faa256975900d1d5f07d57c06881996802ef09f3d7ee27e74cb99136e7a6b5",
+    "url": "https://downloads.openwrt.org/releases/25.12.5/targets/qualcommax/ipq807x/openwrt-imagebuilder-25.12.5-qualcommax-ipq807x.Linux-x86_64.tar.zst"
+  },
+  "official_images": {
+    "initramfs_factory_ubi": {
+      "filename": "openwrt-25.12.5-qualcommax-ipq807x-xiaomi_ax9000-initramfs-factory.ubi",
+      "sha256": "e13523412ffd77b1e0588ee373e71f1e1b57e843b64b0c9141ac0de340f9d562"
+    },
+    "initramfs_uimage_itb": {
+      "filename": "openwrt-25.12.5-qualcommax-ipq807x-xiaomi_ax9000-initramfs-uImage.itb",
+      "sha256": "a0ca1ed740074fe73c88759b86a806187052ef8780c56dcacab2c2333b66d490"
+    },
+    "squashfs_factory_ubi": {
+      "filename": "openwrt-25.12.5-qualcommax-ipq807x-xiaomi_ax9000-squashfs-factory.ubi",
+      "sha256": "ab71dac73dada423196e5c764f7801d0203870bbb87697d1147a43103a952858"
+    },
+    "squashfs_sysupgrade_bin": {
+      "filename": "openwrt-25.12.5-qualcommax-ipq807x-xiaomi_ax9000-squashfs-sysupgrade.bin",
+      "sha256": "9e2bd7f41a40f4cf5b48047d8504c8513783de4e4747adf8e9e28d04441e0336"
+    }
+  },
+  "device_packages": [
+    "ipq-wifi-xiaomi_ax9000",
+    "kmod-ath11k-pci",
+    "ath11k-firmware-qcn9074",
+    "kmod-ath10k-ct",
+    "ath10k-firmware-qca9887-ct"
+  ],
+  "partitions": "standard (use official factory/squashfs-sysupgrade images; do not resize)",
+  "wifi_default": "HE80",
+  "wifi_he160_status": "opt-in after RF/BDF/region/client test"
+}

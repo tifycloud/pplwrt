@@ -1,0 +1,5 @@
+OpenClash official README/Makefile dependencies for this 25.12.5 apk+nftables
+base are documented in docs/openclash.md. The image includes dependencies only:
+bash curl ca-bundle ip-full ruby ruby-yaml kmod-tun dnsmasq-full unzip
+luci-compat and kmod-nft-tproxy/kmod-inet-diag where feed availability permits. The OpenClash
+LuCI package, mihomo core and subscriptions are installed/managed separately.

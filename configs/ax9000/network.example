@@ -1,0 +1,6 @@
+# Copy through scripts/company-network.sh; this file is documentation only.
+# WAN interface names are hardware/board dependent and must be confirmed with
+# `ip -br link` on the router. Do not commit credentials.
+WAN1=eth0.2
+WAN2=eth0.3
+LAN_CIDR=192.168.50.1/24

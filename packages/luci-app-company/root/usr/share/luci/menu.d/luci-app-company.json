@@ -1,0 +1,13 @@
+{
+  "admin/company": {
+    "title": "CompanyWrt",
+    "order": 5,
+    "action": {
+      "type": "template",
+      "path": "company/dashboard"
+    },
+    "depends": {
+      "acl": ["luci-app-company"]
+    }
+  }
+}

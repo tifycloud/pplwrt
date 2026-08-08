@@ -1,0 +1,61 @@
+<%+header%>
+<link rel="stylesheet" href="/luci-static/company/css/company.css" />
+<div class="company-shell company-dashboard" id="company-dashboard">
+  <header class="company-header">
+    <div class="company-brand-mark" aria-hidden="true">CW</div>
+    <div class="company-header-copy">
+      <p class="company-eyebrow">OPERATIONS CONSOLE · AX9000</p>
+      <h1>CompanyWrt</h1>
+      <p>企业网络运行总览 <span class="company-dot">·</span> 只读安全入口</p>
+    </div>
+    <div class="company-header-meta"><span class="company-live-dot"></span><span>稳定基线</span><small>25.12.5</small></div>
+  </header>
+
+  <section class="company-kpis" aria-label="系统状态摘要">
+    <div class="company-kpi company-kpi-ok"><span class="company-kpi-label">设备健康</span><strong>可管理</strong><span>有线管理面已就绪</span></div>
+    <div class="company-kpi company-kpi-ok"><span class="company-kpi-label">防火墙</span><strong>fw4 / nftables</strong><span>默认拒绝 WAN 入站</span></div>
+    <div class="company-kpi company-kpi-neutral"><span class="company-kpi-label">无线策略</span><strong>HE80</strong><span>HE160 需专项实测</span></div>
+    <div class="company-kpi company-kpi-warn"><span class="company-kpi-label">OTA</span><strong>需人工确认</strong><span>自动升级已禁用</span></div>
+  </section>
+
+  <div class="company-section-heading"><div><p class="company-eyebrow">CONTROL PLANE</p><h2>策略与服务</h2></div><span class="company-readonly">只读视图</span></div>
+  <div class="company-grid company-grid-main">
+    <section class="company-card company-card-wide">
+      <div class="company-card-heading"><div><span class="company-icon company-icon-route" aria-hidden="true">↗</span><h3>双 WAN 策略</h3></div><span class="company-pill company-pill-ok">PBR 已就绪</span></div>
+      <p class="company-card-lead">按连接、源/目的地址和端口选择出口，连接跟踪保证会话不漂移。</p>
+      <div class="company-flow" aria-label="LAN 到双 WAN 的策略流向">
+        <div class="company-flow-node"><b>LAN</b><small>管理 / 业务</small></div><span class="company-flow-line"></span><div class="company-flow-node company-flow-node-active"><b>PBR</b><small>fwmark · ip rule</small></div><span class="company-flow-line"></span><div class="company-flow-split"><div><b>WAN1</b><small>主链路</small></div><div><b>WAN2</b><small>备用/策略</small></div></div>
+      </div>
+      <p class="company-note">基础版不安装 mwan3。为 OpenClash 保留独立 mark/table，避免规则所有权冲突。</p>
+      <div class="company-actions"><a class="company-button" href="<%=url('admin','network','interfaces')%>">查看接口 <span aria-hidden="true">→</span></a><a class="company-button company-button-quiet" href="<%=url('admin','services','pbr')%>">审阅 PBR</a></div>
+    </section>
+    <section class="company-card">
+      <div class="company-card-heading"><div><span class="company-icon company-icon-shield" aria-hidden="true">✓</span><h3>安全边界</h3></div><span class="company-pill company-pill-ok">基线通过</span></div>
+      <dl class="company-facts"><div><dt>入口策略</dt><dd>LAN ACCEPT / WAN REJECT</dd></div><div><dt>管理协议</dt><dd>HTTPS + SSH 管理网段</dd></div><div><dt>NAT</dt><dd>WAN zone masquerade</dd></div></dl>
+      <div class="company-actions"><a class="company-button company-button-quiet" href="<%=url('admin','network','firewall')%>">查看防火墙</a></div>
+    </section>
+    <section class="company-card">
+      <div class="company-card-heading"><div><span class="company-icon company-icon-branch" aria-hidden="true">◇</span><h3>OpenClash 边界</h3></div><span class="company-pill company-pill-warn">按需安装</span></div>
+      <p class="company-card-lead">依赖预装，本体、mihomo 核心与订阅分离。TUN 与 nftables tproxy 只能选定一条主路径。</p>
+      <div class="company-ownership"><span>PBR</span><span>→</span><span>未接管流量</span></div>
+      <p class="company-note">启用前记录 DNS、fwmark、路由表和 chain owner。</p>
+      <div class="company-actions"><a class="company-button company-button-quiet" href="<%=url('admin','services','openclash')%>">打开 OpenClash</a></div>
+    </section>
+  </div>
+
+  <div class="company-section-heading"><div><p class="company-eyebrow">OPERATE SAFELY</p><h2>管理员操作</h2></div><span class="company-note">变更前先备份</span></div>
+  <section class="company-admin-strip">
+    <div class="company-admin-copy"><span class="company-icon company-icon-lock" aria-hidden="true">▣</span><div><strong>配置和日志是现场资产</strong><p>VLAN、WireGuard、WAN、订阅和日志不会写入 git；OTA 前备份并保存离线副本。</p></div></div>
+    <div class="company-actions"><a class="company-button" href="<%=url('admin','system','backup')%>">备份配置</a><a class="company-button company-button-quiet" href="<%=url('admin','system','flash')%>">刷写/OTA</a></div>
+  </section>
+  <footer class="company-footer"><span>CompanyWrt · Xiaomi AX9000</span><span>官方救援主题始终保留</span></footer>
+</div>
+<script>
+  (function () {
+    var root = document.getElementById('company-dashboard');
+    if (!root) return;
+    root.classList.add('company-ready');
+    root.querySelectorAll('a').forEach(function (link) { link.setAttribute('aria-label', link.textContent.trim()); });
+  }());
+</script>
+<%+footer%>

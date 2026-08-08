@@ -1,0 +1,2 @@
+CompanyWrt dashboard is intentionally read-only. Apply network, PBR, VLAN,
+WireGuard and OTA changes through the documented admin-confirmed workflows.
