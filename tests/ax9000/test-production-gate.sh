@@ -13,6 +13,8 @@ APPROVED_FOR_STABLE=YES
 VERSION=25.12.5-company.2
 BOARD=xiaomi,ax9000
 HARDWARE_VARIANT=CN-label-observed
+HARDWARE_EVIDENCE_ID=hw-record-fixture-001
+SERIAL_EVIDENCE_ID=serial-record-redacted-001
 SECURE_BOOT_STATE=observed-and-official-recovery-tested
 BOOT_SLOT=slot-a-active-slot-b-recovery
 MTD_LAYOUT=redacted-layout-reviewed
@@ -35,4 +37,11 @@ APPROVER=fixture-reviewer
 APPROVED_AT=2026-08-08T00:00:00Z
 EOF
 "$ROOT/scripts/verify-production-gate.sh" "$TMP/evidence.env" 25.12.5-company.2 | grep -q 'accepted'
+cp "$TMP/evidence.env" "$TMP/unknown.env"
+printf 'RAW_SERIAL=must-not-be-accepted\n' >> "$TMP/unknown.env"
+if "$ROOT/scripts/verify-production-gate.sh" "$TMP/unknown.env" 25.12.5-company.2 >"$TMP/unknown.out" 2>"$TMP/unknown.err"; then
+	echo 'unknown/raw serial evidence field unexpectedly passed' >&2
+	exit 1
+fi
+grep -q 'unknown production evidence key' "$TMP/unknown.err"
 echo 'stable production evidence gate rejects template and accepts complete schema: ok'

@@ -1,11 +1,12 @@
 # Roadmap
 
-## 当前：25.12.5-company.2-rc1（仅 RC）
+## 当前：25.12.5-company.2-rc2（仅 RC）
 
 - 固定 official ImageBuilder/profile/SHA；版本化输出与 squashfs 内容检查。
 - plan-only 双 WAN/PBR；严格 signed OTA；安全首启/preflight；动态只读 UI。
 - WireGuard/logd/collectd 基础、mobile SQM 可选模板、overlay SBOM/NOTICE。
-- 最小权限 release pipeline、Sigstore attestation、RC prerelease/stable production gate。
+- exact-main annotated tag、受保护签名 environment、immutable release/attestation、RC
+  prerelease/stable production gate；RC2 完成旧→新 usign 过渡。
 
 ## 进入 stable 前（全部需要真实 AX9000）
 
@@ -18,5 +19,6 @@
 
 - 用同版本 official OpenWrt SDK 单独构建/签署两个 CompanyWrt APK，并由 ImageBuilder 安装；
   完成前继续诚实使用 overlay 名称，不为包构建切换完整 Buildroot。
-- 设计 staged key rotation、回滚版本策略、集中日志 TLS/collector 与监控告警。
+- 在下一次 key rotation 前设计独立的多阶段过渡版本；完善回滚版本策略、集中日志
+  TLS/collector 与监控告警。
 - 只有 DTS/分区/kernel/BDF/启动链确需修改时建立独立 Buildroot 分支和救援门禁。

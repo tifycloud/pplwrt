@@ -6,10 +6,13 @@ profile 和官方 archive SHA。host helper 仅支持 Linux x86_64。
 
 ## Linux/amd64 或容器构建
 
-完整构建必须提供与 `keys/companywrt-release.pub` 匹配、且位于仓库外的私钥：
+普通完整构建必须提供与 `keys/companywrt-release.pub` 匹配、且位于仓库外的私钥。
+RC2 是一次性 transition build：还需要旧 key 主签和当前 key 共签，两个路径都必须在
+仓库外；正式 RC2 由 `firmware-signing` environment 提供，不从开发机复制长期 secret。
 
 ```sh
-USIGN_SECRET_KEY_FILE=/secure/companywrt-usign.key \
+USIGN_SECRET_KEY_FILE=/secure/companywrt-usign-previous.key \
+USIGN_CURRENT_SECRET_KEY_FILE=/secure/companywrt-usign-current.key \
   ./scripts/build-in-container.sh --profile xiaomi_ax9000 --channel rc
 ```
 
@@ -17,7 +20,7 @@ USIGN_SECRET_KEY_FILE=/secure/companywrt-usign.key \
 容器固定 `ubuntu:24.04` 和 `linux/amd64`，安装 squashfs 内容核查工具。默认目录为：
 
 ```text
-artifacts/rc/25.12.5-company.2-rc1/
+artifacts/rc/25.12.5-company.2-rc2/
 artifacts/beta/25.12.5-company.2-beta1/  # 仅 -betaN VERSION 的显式 beta 构建
 ```
 
@@ -35,7 +38,8 @@ artifacts/beta/25.12.5-company.2-beta1/  # 仅 -betaN VERSION 的显式 beta 构
 4. VERSION/build.conf/公钥/OTA/网络/preflight/LuCI/首启 HTTPS 文件存在；
 5. 官方 loopback/DSA/WAN6 生成逻辑、WAN/WAN6 REJECT zone 和默认 firewall rules 保留；
    首启 overlay 不含默认密码或 WAN ACCEPT；
-6. custom overlay 进入 CUSTOM-COMPONENTS、NOTICE、MIT LICENSE 和 CycloneDX SBOM；
+6. 251 个唯一 PACKAGE-MANIFEST 包与 CycloneDX 上游组件一一映射；缺失组件补成
+   `NOASSERTION`，custom overlay 进入 CUSTOM-COMPONENTS、NOTICE 和 MIT LICENSE；
 7. 私钥与公钥指纹一致后签署 RELEASE-MANIFEST，并用公钥回验；
 8. 所有 release 文件生成 SHA256SUMS 并立即回验。
 
@@ -47,13 +51,27 @@ artifacts/beta/25.12.5-company.2-beta1/  # 仅 -betaN VERSION 的显式 beta 构
 ## CI 权限与发布
 
 - `CompanyWrt CI / checks`：`contents: read`，checkout 不持久化 credentials。
-- release build：`contents: read`，secret 缺失即失败；上传 workflow artifact。
+- 无 secret 的 authorize job 先重新 fetch `origin/main`，要求 annotated tag peeled commit、
+  checkout commit 和受保护 main HEAD 三者精确相等；旧提交上的任意 `v*` 不能读签名 key。
+- release build：`contents: read`，绑定 `firmware-signing` environment；审批、1 分钟 wait
+  timer 和仅 `main` branch/`v*` tag 的 deployment policy 通过后才可读取 environment secret。
 - attestation：只增加 `id-token: write`、`attestations: write`，生成 Sigstore provenance。
 - publish：只下载已构建 artifact，唯一具有 `contents: write` 的 job。
-- tag 必须精确等于 `v$(cat VERSION)`；RC/beta 自动 prerelease。
+- tag 必须是 annotated object 且精确等于 `v$(cat VERSION)`；active `v*` ruleset 禁止删除和
+  non-fast-forward，但不阻止新 RC tag；RC/beta 自动 prerelease。
 - stable 必须存在 `production-gates/<VERSION>.env` 且全部真机项 PASS；模板不能通过。
-- stable 构建出的 sysupgrade SHA 必须与证据文件 `FIRMWARE_SHA256` 完全一致；包仓库或
-  任意源码漂移都会令发布失败并要求重做真机验收。
+- stable 构建出的 sysupgrade SHA 必须与证据文件 `FIRMWARE_SHA256` 完全一致；gate 文件
+  SHA、opaque `HARDWARE_EVIDENCE_ID`/`SERIAL_EVIDENCE_ID` 和被测 SHA 同时写入
+  BUILD-METADATA、内容报告与签名 v2 manifest。RC/beta 只能写
+  `hardware_validation=NOT_PERFORMED_RC_ONLY`。
+- release 先建立完整 draft、上传全部资产再发布。仓库开启 GitHub native release
+  immutability；publish job 必须回读 `immutable=true`，逐资产比对 API digest，并执行
+  `gh release verify` / `verify-asset`。RC1 创建在开关启用前，仍以 tag ruleset、现有 digest
+  和历史 attestation 审计；不要把它误称为原生 immutable。
+
+原生 immutable 仍信任 GitHub 身份、仓库设置和 attestation control plane；draft 在发布前
+可修改，且该开关不追溯 RC1。因此 workflow 只在完整资产进入 draft 后一次发布，并保留
+独立 usign、SHA256SUMS、workflow artifact attestation 和发布后 API digest 多重证据。
 
 为使“先构建并真机测试、再提交证据文件、最后从同一源码发布”可验证，设备内
 `build.conf` 只含 profile/release/channel。精确 source commit 仍写入签名

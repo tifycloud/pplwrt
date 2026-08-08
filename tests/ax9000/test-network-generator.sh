@@ -22,7 +22,7 @@ grep -q "set network.unicom.device='wan'" "$BATCH"
 grep -q "set network.mobile.device='lan4'" "$BATCH"
 grep -q "set network.unicom.metric='10'" "$BATCH"
 grep -q "set network.mobile.metric='20'" "$BATCH"
-grep -q "set pbr.company_server_1.src_addr='192.168.50.10'" "$BATCH"
+grep -q "set pbr.company_server_1.src_addr='192.168.50.10/32'" "$BATCH"
 grep -q "set pbr.company_employee_1.interface='mobile'" "$BATCH"
 grep -q "set pbr.company_mobile_dest_1.dest_addr='uploads.example.com'" "$BATCH"
 grep -q "set pbr.company_unicom_dest_1.dest_addr='203.0.113.0/24'" "$BATCH"
@@ -67,6 +67,22 @@ expect_reject bad-prefix plan --unicom-device wan --mobile-device lan4 --office-
 expect_reject source-injection plan --unicom-device wan --mobile-device lan4 --employee '192.168.1.2;reboot'
 expect_reject domain-injection plan --unicom-device wan --mobile-device lan4 --mobile-dest 'example.com;reboot'
 expect_reject port-injection plan --unicom-device wan --mobile-device lan4 --mobile-port 'tcp:443;reboot'
+expect_reject duplicate-source-normalized plan --unicom-device wan --mobile-device lan4 \
+	--server 192.168.50.10 --employee 192.168.50.10/32
+expect_reject destination-domain-cross-role plan --unicom-device wan --mobile-device lan4 \
+	--mobile-dest Uploads.Example.COM --unicom-dest uploads.example.com
+grep -q 'ambiguous destination assigned to both mobile and unicom' "$TMP/destination-domain-cross-role.err"
+expect_reject destination-ip32-cross-role plan --unicom-device wan --mobile-device lan4 \
+	--mobile-dest 203.0.113.8 --unicom-dest 203.0.113.8/32
+expect_reject destination-cidr-overlap-cross-role plan --unicom-device wan --mobile-device lan4 \
+	--mobile-dest 203.0.113.129/24 --unicom-dest 203.0.113.128/25
+expect_reject port-canonical-cross-role plan --unicom-device wan --mobile-device lan4 \
+	--mobile-port tcp:443-443 --unicom-port tcp:443
+grep -q 'ambiguous port policy assigned to both mobile and unicom' "$TMP/port-canonical-cross-role.err"
+expect_reject port-range-overlap-cross-role plan --unicom-device wan --mobile-device lan4 \
+	--mobile-port udp:1000-2000 --unicom-port udp:1500-2500
+expect_reject duplicate-mobile-destination plan --unicom-device wan --mobile-device lan4 \
+	--mobile-dest Example.com --mobile-dest example.com
 expect_reject static-pair plan --unicom-device wan --mobile-device lan4 --unicom-address 198.51.100.2/24
 expect_reject gateway-subnet plan --unicom-device wan --mobile-device lan4 --unicom-address 198.51.100.2/24 --unicom-gateway 203.0.113.1
 expect_reject gateway-duplicate plan --unicom-device wan --mobile-device lan4 --unicom-address 198.51.100.2/24 --unicom-gateway 198.51.100.2

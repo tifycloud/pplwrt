@@ -181,6 +181,80 @@ valid_port_policy() {
 		}'
 }
 
+canonical_source() {
+	case "$1" in
+		*/*) canonical_cidr "$1" ;;
+		*) printf '%s/32\n' "$1" ;;
+	esac
+}
+
+canonical_destination() {
+	case "$1" in
+		*/*) canonical_cidr "$1" ;;
+		*)
+			if valid_ipv4 "$1"; then
+				printf '%s/32\n' "$1"
+			else
+				printf '%s\n' "$1" | tr '[:upper:]' '[:lower:]'
+			fi
+			;;
+	esac
+}
+
+canonical_port_policy() {
+	printf '%s\n' "$1" | awk -F: '
+		{
+			n = split($2, ports, "-")
+			if (n == 1 || ports[1] == ports[2]) printf "%s:%d\n", $1, ports[1]
+			else printf "%s:%d-%d\n", $1, ports[1], ports[2]
+		}'
+}
+
+list_contains() {
+	items=$1
+	needle=$2
+	for item in $items; do
+		[ "$item" != "$needle" ] || return 0
+	done
+	return 1
+}
+
+destination_list_conflicts() {
+	items=$1
+	candidate=$2
+	for item in $items; do
+		[ "$item" != "$candidate" ] || return 0
+		case "$item:$candidate" in
+			*/*:*/*) cidr_overlaps "$item" "$candidate" && return 0 ;;
+		esac
+	done
+	return 1
+}
+
+port_policies_overlap() {
+	printf '%s %s\n' "$1" "$2" | awk '
+		function parse(spec, result, pair, ports, count) {
+			split(spec, pair, ":")
+			result["protocol"] = pair[1]
+			count = split(pair[2], ports, "-")
+			result["start"] = ports[1] + 0
+			result["finish"] = count == 1 ? ports[1] + 0 : ports[2] + 0
+		}
+		{
+			parse($1, left); parse($2, right)
+			exit !(left["protocol"] == right["protocol"] && left["start"] <= right["finish"] && right["start"] <= left["finish"])
+		}'
+}
+
+port_list_conflicts() {
+	items=$1
+	candidate=$2
+	for item in $items; do
+		port_policies_overlap "$item" "$candidate" && return 0
+	done
+	return 1
+}
+
 MODE=""
 UNICOM_DEVICE=""
 MOBILE_DEVICE=""
@@ -217,32 +291,48 @@ while [ "$#" -gt 0 ]; do
 		--server)
 			[ "$#" -ge 2 ] || die "missing value for $1"
 			valid_ipv4 "$2" || valid_cidr "$2" || die "invalid --server IPv4/CIDR: $2"
-			SERVER_SOURCES="$SERVER_SOURCES $2"; shift 2
+			source=$(canonical_source "$2")
+			list_contains "$SERVER_SOURCES $EMPLOYEE_SOURCES" "$source" && die "duplicate server/employee source after canonicalization: $source"
+			SERVER_SOURCES="$SERVER_SOURCES $source"; shift 2
 			;;
 		--employee)
 			[ "$#" -ge 2 ] || die "missing value for $1"
 			valid_ipv4 "$2" || valid_cidr "$2" || die "invalid --employee IPv4/CIDR: $2"
-			EMPLOYEE_SOURCES="$EMPLOYEE_SOURCES $2"; shift 2
+			source=$(canonical_source "$2")
+			list_contains "$SERVER_SOURCES $EMPLOYEE_SOURCES" "$source" && die "duplicate server/employee source after canonicalization: $source"
+			EMPLOYEE_SOURCES="$EMPLOYEE_SOURCES $source"; shift 2
 			;;
 		--mobile-dest)
 			[ "$#" -ge 2 ] || die "missing value for $1"
 			valid_destination "$2" || die "invalid --mobile-dest domain/IPv4/CIDR: $2"
-			MOBILE_DESTS="$MOBILE_DESTS $2"; shift 2
+			destination=$(canonical_destination "$2")
+			destination_list_conflicts "$MOBILE_DESTS" "$destination" && die "duplicate/overlapping mobile destination: $destination"
+			destination_list_conflicts "$UNICOM_DESTS" "$destination" && die "ambiguous destination assigned to both mobile and unicom: $destination"
+			MOBILE_DESTS="$MOBILE_DESTS $destination"; shift 2
 			;;
 		--unicom-dest)
 			[ "$#" -ge 2 ] || die "missing value for $1"
 			valid_destination "$2" || die "invalid --unicom-dest domain/IPv4/CIDR: $2"
-			UNICOM_DESTS="$UNICOM_DESTS $2"; shift 2
+			destination=$(canonical_destination "$2")
+			destination_list_conflicts "$UNICOM_DESTS" "$destination" && die "duplicate/overlapping unicom destination: $destination"
+			destination_list_conflicts "$MOBILE_DESTS" "$destination" && die "ambiguous destination assigned to both mobile and unicom: $destination"
+			UNICOM_DESTS="$UNICOM_DESTS $destination"; shift 2
 			;;
 		--mobile-port)
 			[ "$#" -ge 2 ] || die "missing value for $1"
 			valid_port_policy "$2" || die "invalid --mobile-port protocol/port: $2"
-			MOBILE_PORTS="$MOBILE_PORTS $2"; shift 2
+			port_policy=$(canonical_port_policy "$2")
+			port_list_conflicts "$MOBILE_PORTS" "$port_policy" && die "duplicate/overlapping mobile port policy: $port_policy"
+			port_list_conflicts "$UNICOM_PORTS" "$port_policy" && die "ambiguous port policy assigned to both mobile and unicom: $port_policy"
+			MOBILE_PORTS="$MOBILE_PORTS $port_policy"; shift 2
 			;;
 		--unicom-port)
 			[ "$#" -ge 2 ] || die "missing value for $1"
 			valid_port_policy "$2" || die "invalid --unicom-port protocol/port: $2"
-			UNICOM_PORTS="$UNICOM_PORTS $2"; shift 2
+			port_policy=$(canonical_port_policy "$2")
+			port_list_conflicts "$UNICOM_PORTS" "$port_policy" && die "duplicate/overlapping unicom port policy: $port_policy"
+			port_list_conflicts "$MOBILE_PORTS" "$port_policy" && die "ambiguous port policy assigned to both mobile and unicom: $port_policy"
+			UNICOM_PORTS="$UNICOM_PORTS $port_policy"; shift 2
 			;;
 		--output) [ "$#" -ge 2 ] || die "missing value for $1"; OUTPUT=$2; shift 2 ;;
 		-h|--help) usage; exit 0 ;;

@@ -16,36 +16,52 @@ permissions:
   contents: read
 
 jobs:
-  build:
-    name: build-signed-firmware
+  authorize:
+    name: authorize-exact-protected-main-tag
     runs-on: ubuntu-24.04
     permissions:
       contents: read
-    env:
-      SOURCE_DATE_EPOCH: '1783468800'
     outputs:
       channel: ${{ steps.meta.outputs.channel }}
       version: ${{ steps.meta.outputs.version }}
       source_commit: ${{ steps.meta.outputs.source_commit }}
       artifact_name: ${{ steps.meta.outputs.artifact_name }}
     steps:
-      - name: Checkout without persisted credentials
+      - name: Checkout complete history without persisted credentials
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
+          fetch-depth: 0
           persist-credentials: false
-      - name: Resolve tag, version and production gate
+      - name: Authorize exact protected main commit and annotated tag
         id: meta
         shell: bash
         env:
           REQUESTED_CHANNEL: ${{ inputs.channel }}
         run: |
           set -euo pipefail
+          git fetch --force --no-tags origin \
+            +refs/heads/main:refs/remotes/origin/main
           version=$(cat VERSION)
-          source_commit=$(git rev-parse HEAD)
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+-company\.[0-9]+(-(rc|beta)[1-9][0-9]*)?$ ]]
+          source_commit=$(git rev-parse 'HEAD^{commit}')
+          main_head=$(git rev-parse 'refs/remotes/origin/main^{commit}')
           [[ "$source_commit" =~ ^[0-9a-f]{40}$ ]]
           if [[ "$GITHUB_REF" == refs/tags/* ]]; then
             test "$GITHUB_REF_NAME" = "v$version" || {
               echo "tag $GITHUB_REF_NAME must exactly match VERSION v$version" >&2
+              exit 1
+            }
+            test "$(git cat-file -t "refs/tags/$GITHUB_REF_NAME")" = tag || {
+              echo 'release tags must be annotated tag objects; lightweight tags are forbidden' >&2
+              exit 1
+            }
+            peeled_commit=$(git rev-parse "refs/tags/$GITHUB_REF_NAME^{commit}")
+            test "$peeled_commit" = "$source_commit" || {
+              echo 'checked-out commit does not equal the annotated tag peeled commit' >&2
+              exit 1
+            }
+            test "$peeled_commit" = "$main_head" || {
+              echo 'release tag peeled commit must exactly equal the current protected origin/main HEAD' >&2
               exit 1
             }
             case "$version" in
@@ -54,9 +70,25 @@ jobs:
               *) channel=stable ;;
             esac
           else
+            test "$GITHUB_REF" = refs/heads/main || {
+              echo 'manual signed builds are allowed only from protected main' >&2
+              exit 1
+            }
+            test "$source_commit" = "$main_head" || {
+              echo 'manual signed build commit must exactly equal protected origin/main HEAD' >&2
+              exit 1
+            }
             channel=${REQUESTED_CHANNEL:-rc}
           fi
-          ./scripts/build-imagebuilder.sh --channel "$channel" --print-output >/dev/null
+          case "$channel" in
+            rc) [[ "$version" =~ -rc[1-9][0-9]*$ ]] ;;
+            beta) [[ "$version" =~ -beta[1-9][0-9]*$ ]] ;;
+            stable) [[ "$version" =~ -company\.[0-9]+$ ]] ;;
+            *) echo "invalid release channel: $channel" >&2; exit 1 ;;
+          esac || {
+            echo "channel $channel does not strictly match VERSION $version" >&2
+            exit 1
+          }
           if [[ "$channel" == stable ]]; then
             evidence="production-gates/$version.env"
             test -f "$evidence" || {
@@ -65,91 +97,181 @@ jobs:
             }
             ./scripts/verify-production-gate.sh "$evidence" "$version"
           fi
+          ./scripts/build-imagebuilder.sh --channel "$channel" --print-output >/dev/null
           {
             echo "version=$version"
             echo "channel=$channel"
             echo "source_commit=$source_commit"
             echo "artifact_name=companywrt-$channel-$version-$source_commit"
           } >> "$GITHUB_OUTPUT"
-      - name: Require encrypted usign signing key
+
+  build:
+    name: build-signed-firmware
+    needs: authorize
+    runs-on: ubuntu-24.04
+    environment: firmware-signing
+    permissions:
+      contents: read
+    env:
+      SOURCE_DATE_EPOCH: '1783468800'
+    outputs:
+      channel: ${{ needs.authorize.outputs.channel }}
+      version: ${{ needs.authorize.outputs.version }}
+      source_commit: ${{ needs.authorize.outputs.source_commit }}
+      artifact_name: ${{ needs.authorize.outputs.artifact_name }}
+    steps:
+      - name: Checkout authorized source without persisted credentials
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ needs.authorize.outputs.source_commit }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Revalidate protected main and annotated tag before signing
         shell: bash
-        env:
-          USIGN_SECRET_KEY: ${{ secrets.COMPANYWRT_USIGN_SECRET_KEY }}
         run: |
           set -euo pipefail
-          test -n "$USIGN_SECRET_KEY" || {
-            echo 'COMPANYWRT_USIGN_SECRET_KEY is missing; signed release builds fail closed' >&2
+          git fetch --force --no-tags origin \
+            +refs/heads/main:refs/remotes/origin/main
+          test "$(git rev-parse 'HEAD^{commit}')" = '${{ needs.authorize.outputs.source_commit }}'
+          test "$(git rev-parse 'refs/remotes/origin/main^{commit}')" = '${{ needs.authorize.outputs.source_commit }}' || {
+            echo 'protected origin/main moved after authorization; refusing signing access' >&2
             exit 1
           }
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            git fetch --force origin "refs/tags/$GITHUB_REF_NAME:refs/tags/$GITHUB_REF_NAME"
+            test "$(git cat-file -t "refs/tags/$GITHUB_REF_NAME")" = tag
+            test "$(git rev-parse "refs/tags/$GITHUB_REF_NAME^{commit}")" = '${{ needs.authorize.outputs.source_commit }}'
+            test "$GITHUB_REF_NAME" = 'v${{ needs.authorize.outputs.version }}'
+          fi
+      - name: Materialize protected signing keys only after exact-main recheck
+        shell: bash
+        env:
+          PREVIOUS_USIGN_SECRET_KEY: ${{ secrets.COMPANYWRT_USIGN_SECRET_KEY }}
+          CURRENT_USIGN_SECRET_KEY: ${{ secrets.COMPANYWRT_USIGN_CURRENT_SECRET_KEY }}
+        run: |
+          set -euo pipefail
+          git fetch --force --no-tags origin \
+            +refs/heads/main:refs/remotes/origin/main
+          test "$(git rev-parse 'refs/remotes/origin/main^{commit}')" = '${{ needs.authorize.outputs.source_commit }}' || {
+            echo 'protected origin/main moved immediately before key materialization' >&2
+            exit 1
+          }
+          version='${{ needs.authorize.outputs.version }}'
+          transition_version=$(sed -n 's/^TRANSITION_VERSION=//p' keys/ROTATION.env)
           umask 077
-          key_file="$RUNNER_TEMP/companywrt-usign.key"
-          printf '%s\n' "$USIGN_SECRET_KEY" > "$key_file"
-          echo "USIGN_SECRET_KEY_FILE=$key_file" >> "$GITHUB_ENV"
+          if [[ "$version" == "$transition_version" ]]; then
+            test -n "$PREVIOUS_USIGN_SECRET_KEY" || {
+              echo 'transition release requires the previous repository signing secret' >&2
+              exit 1
+            }
+            test -n "$CURRENT_USIGN_SECRET_KEY" || {
+              echo 'transition release requires COMPANYWRT_USIGN_CURRENT_SECRET_KEY in firmware-signing' >&2
+              exit 1
+            }
+            previous_key="$RUNNER_TEMP/companywrt-usign-previous.key"
+            current_key="$RUNNER_TEMP/companywrt-usign-current.key"
+            printf '%s\n' "$PREVIOUS_USIGN_SECRET_KEY" > "$previous_key"
+            printf '%s\n' "$CURRENT_USIGN_SECRET_KEY" > "$current_key"
+            echo "USIGN_SECRET_KEY_FILE=$previous_key" >> "$GITHUB_ENV"
+            echo "USIGN_CURRENT_SECRET_KEY_FILE=$current_key" >> "$GITHUB_ENV"
+          else
+            test -n "$CURRENT_USIGN_SECRET_KEY" || {
+              echo 'COMPANYWRT_USIGN_CURRENT_SECRET_KEY is missing from firmware-signing' >&2
+              exit 1
+            }
+            current_key="$RUNNER_TEMP/companywrt-usign-current.key"
+            printf '%s\n' "$CURRENT_USIGN_SECRET_KEY" > "$current_key"
+            echo "USIGN_SECRET_KEY_FILE=$current_key" >> "$GITHUB_ENV"
+          fi
       - name: Install build and inspection dependencies
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends file jq shellcheck squashfs-tools
       - name: Run source checks
+        shell: bash
         run: |
-          set -eu
+          set -euo pipefail
           ./scripts/verify-shell.sh
-          tests/ax9000/test-profile.sh
-          tests/ax9000/test-network-generator.sh
-          tests/ax9000/test-ota.sh
-          tests/ax9000/test-ui.sh
-          tests/ax9000/test-build-layout.sh
-          tests/ax9000/test-content-source.sh
-          tests/ax9000/test-enrollment-preflight.sh
-          tests/ax9000/test-production-gate.sh
-          tests/ax9000/test-workflows.sh
+          for test_script in tests/ax9000/test-*.sh; do
+            "$test_script"
+          done
       - name: Build signed official ImageBuilder image
         shell: bash
         run: |
           set -euo pipefail
-          ./scripts/build-imagebuilder.sh \
-            --profile xiaomi_ax9000 \
-            --channel '${{ steps.meta.outputs.channel }}' \
-            --source-commit '${{ steps.meta.outputs.source_commit }}'
-      - name: Bind stable output to the hardware-tested firmware digest
-        if: steps.meta.outputs.channel == 'stable'
+          arguments=(
+            --profile xiaomi_ax9000
+            --channel '${{ needs.authorize.outputs.channel }}'
+            --source-commit '${{ needs.authorize.outputs.source_commit }}'
+          )
+          if [[ '${{ needs.authorize.outputs.channel }}' == stable ]]; then
+            arguments+=(--production-gate 'production-gates/${{ needs.authorize.outputs.version }}.env')
+          fi
+          ./scripts/build-imagebuilder.sh "${arguments[@]}"
+      - name: Recheck hardware evidence binding or explicit RC-only status
         shell: bash
         run: |
           set -euo pipefail
-          output="artifacts/${{ steps.meta.outputs.channel }}/${{ steps.meta.outputs.version }}"
-          built_sha=$(sed -n 's/^SHA256=//p' "$output/RELEASE-MANIFEST")
-          tested_sha=$(sed -n 's/^FIRMWARE_SHA256=//p' "production-gates/${{ steps.meta.outputs.version }}.env")
-          test "$built_sha" = "$tested_sha" || {
-            echo 'stable blocked: built firmware does not match the exact hardware-tested digest' >&2
-            exit 1
-          }
+          output='artifacts/${{ needs.authorize.outputs.channel }}/${{ needs.authorize.outputs.version }}'
+          if [[ '${{ needs.authorize.outputs.channel }}' == stable ]]; then
+            evidence='production-gates/${{ needs.authorize.outputs.version }}.env'
+            evidence_sha=$(sha256sum "$evidence" | awk '{print $1}')
+            tested_sha=$(sed -n 's/^FIRMWARE_SHA256=//p' "$evidence")
+            grep -qx 'hardware_validation=VERIFIED' "$output/BUILD-METADATA"
+            grep -qx "production_gate_sha256=$evidence_sha" "$output/BUILD-METADATA"
+            grep -qx "tested_firmware_sha256=$tested_sha" "$output/BUILD-METADATA"
+            grep -qx 'HARDWARE_VALIDATION=VERIFIED' "$output/RELEASE-MANIFEST"
+            grep -qx "PRODUCTION_GATE_SHA256=$evidence_sha" "$output/RELEASE-MANIFEST"
+            grep -qx "TESTED_FIRMWARE_SHA256=$tested_sha" "$output/RELEASE-MANIFEST"
+          else
+            grep -qx 'hardware_validation=NOT_PERFORMED_RC_ONLY' "$output/BUILD-METADATA"
+            grep -qx 'hardware_validation=NOT_PERFORMED_RC_ONLY' "$output/FIRMWARE-CONTENT-REPORT.txt"
+            if grep -q '^HARDWARE_VALIDATION=' "$output/RELEASE-MANIFEST"; then
+              echo 'RC/beta v1 manifest unexpectedly contains stable hardware fields' >&2
+              exit 1
+            fi
+          fi
       - name: Verify release bundle and OTA download path end to end
         shell: bash
         run: |
           set -euo pipefail
-          output="artifacts/${{ steps.meta.outputs.channel }}/${{ steps.meta.outputs.version }}"
+          output='artifacts/${{ needs.authorize.outputs.channel }}/${{ needs.authorize.outputs.version }}'
           (cd "$output" && sha256sum -c SHA256SUMS)
           image=$(find "$output" -maxdepth 1 -type f -name '*sysupgrade.bin' -print -quit)
           usign_dir=$(dirname "$(find .build -path '*/staging_dir/host/bin/usign' -type f -print -quit)")
           test -n "$image" && test -n "$usign_dir"
+          public_key=keys/companywrt-release.pub
+          transition_version=$(sed -n 's/^TRANSITION_VERSION=//p' keys/ROTATION.env)
+          if [[ '${{ needs.authorize.outputs.version }}' == "$transition_version" ]]; then
+            public_key=keys/companywrt-release-previous.pub
+          fi
           PATH="$usign_dir:$PATH" ./scripts/ota-check.sh \
             --manifest "$output/RELEASE-MANIFEST" \
             --signature "$output/RELEASE-MANIFEST.sig" \
             --image "$image" \
-            --public-key keys/companywrt-release.pub \
+            --public-key "$public_key" \
             --download-dir "$RUNNER_TEMP/ota-e2e" \
-            --version '${{ steps.meta.outputs.version }}' \
+            --version '${{ needs.authorize.outputs.version }}' \
             --profile xiaomi_ax9000 --board xiaomi,ax9000 \
-            --channel '${{ steps.meta.outputs.channel }}'
-      - name: Destroy runner copy of signing key
+            --channel '${{ needs.authorize.outputs.channel }}'
+          if [[ '${{ needs.authorize.outputs.version }}' == "$transition_version" ]]; then
+            PATH="$usign_dir:$PATH" usign -q -V \
+              -p keys/companywrt-release.pub \
+              -m "$output/RELEASE-MANIFEST" \
+              -x "$output/RELEASE-MANIFEST.next.sig"
+          fi
+      - name: Destroy runner copies of signing keys
         if: always()
         shell: bash
         run: |
-          if [[ -n "${USIGN_SECRET_KEY_FILE:-}" && -f "$USIGN_SECRET_KEY_FILE" ]]; then
-            shred -u "$USIGN_SECRET_KEY_FILE" 2>/dev/null || rm -f "$USIGN_SECRET_KEY_FILE"
-          fi
-      - name: Upload immutable build artifact
+          for key_file in "${USIGN_SECRET_KEY_FILE:-}" "${USIGN_CURRENT_SECRET_KEY_FILE:-}"; do
+            if [[ -n "$key_file" && -f "$key_file" ]]; then
+              shred -u "$key_file" 2>/dev/null || rm -f "$key_file"
+            fi
+          done
+      - name: Upload content-addressed build artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: ${{ steps.meta.outputs.artifact_name }}
-          path: artifacts/${{ steps.meta.outputs.channel }}/${{ steps.meta.outputs.version }}/
+          name: ${{ needs.authorize.outputs.artifact_name }}
+          path: artifacts/${{ needs.authorize.outputs.channel }}/${{ needs.authorize.outputs.version }}/
           if-no-files-found: error
           retention-days: 30
 
@@ -183,27 +305,43 @@ jobs:
           retention-days: 30
 
   publish:
-    name: publish-tagged-release
+    name: publish-verified-immutable-tag-release
     if: startsWith(github.ref, 'refs/tags/v')
     needs: [build, attest]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
+      attestations: read
     steps:
       - name: Download attested assets from the write-free jobs
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
         with:
           name: attested-${{ needs.build.outputs.artifact_name }}
           path: release
-      - name: Recheck tag and checksums before publishing
+      - name: Recheck protected main, annotated tag and checksums before publishing
         shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          test "$GITHUB_REF_NAME" = "v${{ needs.build.outputs.version }}"
+          test "$GITHUB_REF_NAME" = 'v${{ needs.build.outputs.version }}'
+          ref_json=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$GITHUB_REF_NAME")
+          test "$(jq -r .object.type <<<"$ref_json")" = tag || {
+            echo 'publish requires an annotated tag object' >&2
+            exit 1
+          }
+          tag_object=$(jq -r .object.sha <<<"$ref_json")
+          peeled_commit=$(gh api "repos/$GITHUB_REPOSITORY/git/tags/$tag_object" --jq .object.sha)
+          main_head=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq .object.sha)
+          test "$peeled_commit" = '${{ needs.build.outputs.source_commit }}'
+          test "$main_head" = '${{ needs.build.outputs.source_commit }}' || {
+            echo 'protected main no longer equals the signed tag commit; refusing publication' >&2
+            exit 1
+          }
           grep -qx "TAG=$GITHUB_REF_NAME" release/RELEASE-MANIFEST
-          grep -qx "SOURCE_COMMIT=${{ needs.build.outputs.source_commit }}" release/RELEASE-MANIFEST
+          grep -qx 'SOURCE_COMMIT=${{ needs.build.outputs.source_commit }}' release/RELEASE-MANIFEST
           (cd release && sha256sum -c SHA256SUMS)
-      - name: Publish immutable tag release
+      - name: Create complete draft then publish immutable release
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -216,6 +354,47 @@ jobs:
           gh release create "$GITHUB_REF_NAME" release/* \
             --repo "$GITHUB_REPOSITORY" \
             --verify-tag \
+            --draft \
             --title "CompanyWrt $GITHUB_REF_NAME (${{ needs.build.outputs.channel }})" \
             --notes-file release/RELEASE-NOTES.md \
             "${prerelease[@]}"
+          gh release edit "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --draft=false
+      - name: Verify immutable state, remote digests and release attestations
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          release_json="$RUNNER_TEMP/release.json"
+          gh api "repos/$GITHUB_REPOSITORY/releases/tags/$GITHUB_REF_NAME" > "$release_json"
+          jq -e '.immutable == true and .draft == false' "$release_json" >/dev/null || {
+            echo 'published release is not reported immutable by GitHub' >&2
+            exit 1
+          }
+          local_count=$(find release -maxdepth 1 -type f | wc -l | tr -d '[:space:]')
+          remote_count=$(jq '.assets | length' "$release_json")
+          test "$local_count" = "$remote_count"
+          for asset in release/*; do
+            name=$(basename "$asset")
+            local_digest="sha256:$(sha256sum "$asset" | awk '{print $1}')"
+            remote_digest=$(jq -r --arg name "$name" '[.assets[] | select(.name == $name) | .digest] | if length == 1 then .[0] else "" end' "$release_json")
+            test "$local_digest" = "$remote_digest" || {
+              echo "published asset digest mismatch: $name" >&2
+              exit 1
+            }
+          done
+          verified=0
+          for _ in 1 2 3 4 5; do
+            if gh release verify "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null; then
+              verified=1
+              break
+            fi
+            sleep 5
+          done
+          test "$verified" -eq 1 || {
+            echo 'GitHub immutable release attestation did not verify' >&2
+            exit 1
+          }
+          for asset in release/*; do
+            gh release verify-asset "$GITHUB_REF_NAME" "$asset" --repo "$GITHUB_REPOSITORY" >/dev/null
+          done

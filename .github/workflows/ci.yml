@@ -20,16 +20,11 @@ jobs:
       - name: Install static check dependencies
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends jq shellcheck
       - name: Shell, policy and metadata checks
+        shell: bash
         run: |
-          set -eu
+          set -euo pipefail
           ./scripts/verify-shell.sh
-          tests/ax9000/test-profile.sh
-          tests/ax9000/test-network-generator.sh
-          tests/ax9000/test-ota.sh
-          tests/ax9000/test-ui.sh
-          tests/ax9000/test-build-layout.sh
-          tests/ax9000/test-content-source.sh
-          tests/ax9000/test-enrollment-preflight.sh
-          tests/ax9000/test-production-gate.sh
-          tests/ax9000/test-workflows.sh
-          test "$(cat VERSION)" = '25.12.5-company.2-rc1'
+          for test_script in tests/ax9000/test-*.sh; do
+            "$test_script"
+          done
+          test "$(cat VERSION)" = '25.12.5-company.2-rc2'
