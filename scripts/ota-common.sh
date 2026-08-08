@@ -20,6 +20,8 @@ ota_validate_manifest() {
 		BEGIN {
 			required["FORMAT"] = 1; required["VERSION"] = 1; required["OPENWRT_RELEASE"] = 1
 			required["PROFILE"] = 1; required["BOARD"] = 1; required["CHANNEL"] = 1
+			required["PARTITION_VARIANT"] = 1; required["MIBIB_SHA256"] = 1
+			required["APPSBL_SHA256"] = 1; required["MIGRATION_BOARD"] = 1
 			required["TAG"] = 1; required["SOURCE_COMMIT"] = 1; required["IMAGE"] = 1
 			required["SHA256"] = 1; required["SIZE"] = 1; required["URL"] = 1
 			required["SIGNATURE"] = 1; required["SIGNATURE_URL"] = 1; required["USIGN_KEY_ID"] = 1
@@ -39,11 +41,11 @@ ota_validate_manifest() {
 		}
 		END {
 			for (key in required) if (!seen[key]) { print "missing manifest field: " key > "/dev/stderr"; exit 1 }
-			if (values["FORMAT"] == "companywrt-release-v1") {
-				if (NR != 15) { print "v1 manifest must contain exactly 15 fields" > "/dev/stderr"; exit 1 }
+			if (values["FORMAT"] == "companywrt-darkyun-release-v1") {
+				if (NR != 19) { print "Darkyun v1 manifest must contain exactly 19 fields" > "/dev/stderr"; exit 1 }
 				for (key in hardware) if (seen[key]) { print "v1 manifest contains stable-only field: " key > "/dev/stderr"; exit 1 }
-			} else if (values["FORMAT"] == "companywrt-release-v2") {
-				if (NR != 20) { print "v2 manifest must contain exactly 20 fields" > "/dev/stderr"; exit 1 }
+			} else if (values["FORMAT"] == "companywrt-darkyun-release-v2") {
+				if (NR != 24) { print "Darkyun v2 manifest must contain exactly 24 fields" > "/dev/stderr"; exit 1 }
 				for (key in hardware) if (!seen[key]) { print "missing v2 manifest field: " key > "/dev/stderr"; exit 1 }
 			} else {
 				print "unsupported manifest format: " values["FORMAT"] > "/dev/stderr"; exit 1
@@ -55,6 +57,10 @@ ota_validate_manifest() {
 	OTA_OPENWRT_RELEASE=$(ota_manifest_value OPENWRT_RELEASE "$manifest")
 	OTA_PROFILE=$(ota_manifest_value PROFILE "$manifest")
 	OTA_BOARD=$(ota_manifest_value BOARD "$manifest")
+	OTA_PARTITION_VARIANT=$(ota_manifest_value PARTITION_VARIANT "$manifest")
+	OTA_MIBIB_SHA256=$(ota_manifest_value MIBIB_SHA256 "$manifest")
+	OTA_APPSBL_SHA256=$(ota_manifest_value APPSBL_SHA256 "$manifest")
+	OTA_MIGRATION_BOARD=$(ota_manifest_value MIGRATION_BOARD "$manifest")
 	OTA_CHANNEL=$(ota_manifest_value CHANNEL "$manifest")
 	OTA_TAG=$(ota_manifest_value TAG "$manifest")
 	OTA_SOURCE_COMMIT=$(ota_manifest_value SOURCE_COMMIT "$manifest")
@@ -71,7 +77,7 @@ ota_validate_manifest() {
 	OTA_SERIAL_EVIDENCE_ID=$(ota_manifest_value SERIAL_EVIDENCE_ID "$manifest")
 	OTA_TESTED_FIRMWARE_SHA256=$(ota_manifest_value TESTED_FIRMWARE_SHA256 "$manifest")
 
-	case "$OTA_FORMAT" in companywrt-release-v1|companywrt-release-v2) ;; *) ota_die "unsupported manifest format: $OTA_FORMAT" ;; esac
+	case "$OTA_FORMAT" in companywrt-darkyun-release-v1|companywrt-darkyun-release-v2) ;; *) ota_die "unsupported manifest format: $OTA_FORMAT" ;; esac
 	printf '%s\n' "$OTA_VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+-company\.[0-9]+(-(rc|beta)[1-9][0-9]*)?$' || ota_die "invalid VERSION"
 	printf '%s\n' "$OTA_OPENWRT_RELEASE" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' || ota_die "invalid OPENWRT_RELEASE"
 	printf '%s\n' "$OTA_PROFILE" | grep -Eq '^[a-z0-9][a-z0-9_]{0,63}$' || ota_die "invalid PROFILE"
@@ -81,11 +87,17 @@ ota_validate_manifest() {
 		beta) printf '%s\n' "$OTA_VERSION" | grep -Eq -- '-beta[1-9][0-9]*$' || ota_die "beta channel requires a -betaN version" ;;
 		stable)
 			printf '%s\n' "$OTA_VERSION" | grep -Eq -- '-(rc|beta)[1-9][0-9]*$' && ota_die "stable channel cannot use a prerelease version"
-			[ "$OTA_FORMAT" = companywrt-release-v2 ] || ota_die "stable channel requires a hardware-bound v2 manifest"
+			[ "$OTA_FORMAT" = companywrt-darkyun-release-v2 ] || ota_die "stable channel requires a hardware-bound Darkyun v2 manifest"
 			;;
 		*) ota_die "invalid CHANNEL: $OTA_CHANNEL" ;;
 	esac
-	if [ "$OTA_FORMAT" = companywrt-release-v2 ]; then
+	[ "$OTA_PROFILE" = xiaomi_ax9000_darkyun ] || ota_die "manifest is not the Darkyun AX9000 profile"
+	[ "$OTA_BOARD" = xiaomi,ax9000-darkyun ] || ota_die "manifest is not the Darkyun AX9000 board"
+	[ "$OTA_PARTITION_VARIANT" = darkyun-large-ubi-v1 ] || ota_die "unsupported partition variant"
+	[ "$OTA_MIBIB_SHA256" = 2d79c1b15b8946af733dba5fff5e33bf3ba18863ed734710bd2a5e48fc469c11 ] || ota_die "MIBIB trust fingerprint mismatch"
+	[ "$OTA_APPSBL_SHA256" = 80908e502add45ee6aa7ad83aa16ec2c3c8bf27b572ac0f9c3fe404b94fc0007 ] || ota_die "APPSBL trust fingerprint mismatch"
+	[ "$OTA_MIGRATION_BOARD" = xiaomi,ax9000 ] || ota_die "unexpected one-time migration board"
+	if [ "$OTA_FORMAT" = companywrt-darkyun-release-v2 ]; then
 		[ "$OTA_CHANNEL" = stable ] || ota_die "v2 hardware-bound manifests are stable-only"
 		[ "$OTA_HARDWARE_VALIDATION" = VERIFIED ] || ota_die "v2 manifest requires HARDWARE_VALIDATION=VERIFIED"
 		printf '%s\n' "$OTA_PRODUCTION_GATE_SHA256" "$OTA_TESTED_FIRMWARE_SHA256" | \

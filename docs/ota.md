@@ -4,16 +4,20 @@ CompanyWrt 不提供无人值守 OTA。每个候选 release 必须同时包含�
 `RELEASE-MANIFEST`、`RELEASE-MANIFEST.sig`、`SHA256SUMS`、包清单、SBOM、NOTICE、
 MIT LICENSE、内容报告和 GitHub artifact attestation。
 
-## 严格 manifest（RC/beta v1 为 15 字段，stable v2 为 20 字段）
+## 严格 manifest（暗云 RC/beta v1 为 19 字段，stable v2 为 24 字段）
 
 格式为每行一个 `KEY=value`，不允许空行、注释、未知字段或重复字段：
 
 ```text
-FORMAT=companywrt-release-v1
+FORMAT=companywrt-darkyun-release-v1
 VERSION=25.12.5-company.2-rc2
 OPENWRT_RELEASE=25.12.5
-PROFILE=xiaomi_ax9000
-BOARD=xiaomi,ax9000
+PROFILE=xiaomi_ax9000_darkyun
+BOARD=xiaomi,ax9000-darkyun
+PARTITION_VARIANT=darkyun-large-ubi-v1
+MIBIB_SHA256=2d79c1b15b8946af733dba5fff5e33bf3ba18863ed734710bd2a5e48fc469c11
+APPSBL_SHA256=80908e502add45ee6aa7ad83aa16ec2c3c8bf27b572ac0f9c3fe404b94fc0007
+MIGRATION_BOARD=xiaomi,ax9000
 CHANNEL=rc
 TAG=v25.12.5-company.2-rc2
 SOURCE_COMMIT=<40-lowercase-hex>
@@ -41,7 +45,7 @@ RC/beta 不允许伪造这些 stable 字段，其 BUILD-METADATA 与内容报告
 
 远程 manifest、signature 和 image 都只允许 HTTPS，curl redirect 也限制为 HTTPS。
 签名使用固件内 `/etc/companywrt/keys/release.pub` 的 usign key；manifest 签名把
-version/profile/board/channel/tag/commit/image/size/SHA/URL 绑定为一个整体。
+version/profile/board/partition/MIBIB/APPSBL/channel/tag/commit/image/size/SHA/URL 绑定为一个整体。
 RC2 是轮换例外：`RELEASE-MANIFEST.sig` 仍由 RC1 旧 key 主签，
 `RELEASE-MANIFEST.next.sig` 由新 key 对同一字节共签，RC2 rootfs 只嵌入新 key。这样
 RC1 无需信任锚 override 即可验证过渡，RC2 之后的版本再由新 key 主签。
@@ -74,8 +78,8 @@ usign signature、实际字节数和 SHA256。短 SHA、仅打印 manifest SHA�
 ```
 
 `ota-apply` 不信任先前的 ota-check 结果，会复制/下载后重新验证全部绑定，并通过
-`ubus`+`jsonfilter` 核对真实 `xiaomi,ax9000`、`qualcommax/ipq807x`、OpenWrt release，
-再核对安装的 build.conf profile/channel/version。它拒绝未审阅的同版本重装，要求
+`ubus`+`jsonfilter` 核对真实 `xiaomi,ax9000-darkyun`、`qualcommax/ipq807x`、OpenWrt
+release，再核对安装的 build.conf profile/board/partition/channel/version。它拒绝未审阅的同版本重装，要求
 版本和 SHA 两次独立确认，只执行 `sysupgrade -T`。通过后仅打印最终人工
 `sysupgrade '<verified-file>'`，不会执行、重启或自动重试。
 

@@ -36,7 +36,13 @@ grep -Fq "production-gates/\$version.env" "$RELEASE"
 grep -q 'hardware_validation=NOT_PERFORMED_RC_ONLY' "$RELEASE"
 grep -q 'hardware_validation=VERIFIED' "$RELEASE"
 grep -q 'production_gate_sha256=' "$RELEASE"
-grep -q 'built firmware does not match the exact hardware-tested digest' "$ROOT/scripts/build-imagebuilder.sh"
+grep -q 'built firmware does not match the exact hardware-tested digest' "$ROOT/scripts/build-buildroot.sh"
+grep -q 'Build signed Darkyun large-UBI firmware from pinned OpenWrt source' "$RELEASE"
+grep -Fq -- '--profile xiaomi_ax9000_darkyun' "$RELEASE"
+if grep -Fq './scripts/build-imagebuilder.sh' "$RELEASE"; then
+	echo 'release workflow still invokes the incompatible standard ImageBuilder path' >&2
+	exit 1
+fi
 grep -q 'RELEASE-MANIFEST.next.sig' "$RELEASE"
 grep -q 'prerelease=(--prerelease)' "$RELEASE"
 grep -q 'needs: \[build, attest\]' "$RELEASE"

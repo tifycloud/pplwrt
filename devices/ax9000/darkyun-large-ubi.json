@@ -1,0 +1,61 @@
+{
+  "schema": "companywrt-device-layout-v1",
+  "profile": "xiaomi_ax9000_darkyun",
+  "board": "xiaomi,ax9000-darkyun",
+  "migration_board": "xiaomi,ax9000",
+  "partition_variant": "darkyun-large-ubi-v1",
+  "openwrt": {
+    "release": "25.12.5",
+    "tag": "v25.12.5",
+    "commit": "f0a60eee2fe051741c643ea6118718aae1ef17fb",
+    "tag_object": "e20bc3ec9eb9e3dbd0519ddc18f81f3eedc0f45e",
+    "source": "https://git.openwrt.org/openwrt/openwrt.git",
+    "target": "qualcommax/ipq807x"
+  },
+  "rootfs": {
+    "mtd_label": "rootfs",
+    "offset_hex": "0x01180000",
+    "size_hex": "0x0e800000",
+    "size_bytes": 243269632,
+    "erase_size_hex": "0x00020000",
+    "ubi_volumes": ["kernel", "rootfs", "rootfs_data"]
+  },
+  "cfg_bak": {
+    "mtd_label": "cfg_bak",
+    "offset_hex": "0x0f980000",
+    "size_hex": "0x00080000",
+    "size_bytes": 524288
+  },
+  "mibib": {
+    "mtd_label": "0:mibib",
+    "read_length": 262144,
+    "sha256": "2d79c1b15b8946af733dba5fff5e33bf3ba18863ed734710bd2a5e48fc469c11"
+  },
+  "appsbl": {
+    "primary_mtd_label": "0:appsbl",
+    "secondary_mtd_label": "0:appsbl_1",
+    "read_length": 653422,
+    "sha256": "80908e502add45ee6aa7ad83aa16ec2c3c8bf27b572ac0f9c3fe404b94fc0007"
+  },
+  "boot": {
+    "loader": "Darkyun U-Boot 23.01.10",
+    "ubi_mtd": "rootfs",
+    "kernel_volume": "kernel",
+    "root_volume": "rootfs",
+    "root_ubiblock": "/dev/ubiblock0_1"
+  },
+  "live_validation": {
+    "date": "2026-08-08",
+    "method": "read-only-ssh-preflight-v1",
+    "result": "PASS",
+    "rootfs_mtd": "mtd21",
+    "sysupgrade_test_and_force_options": true,
+    "persistent_router_changes": false
+  },
+  "safety": {
+    "standard_openwrt_image_compatible": false,
+    "factory_image_published": false,
+    "one_time_migration_requires_exact_fingerprint": true,
+    "automatic_flashing": false
+  }
+}

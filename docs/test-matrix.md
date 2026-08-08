@@ -9,7 +9,7 @@ ID，不能是原始设备序列号。模板/占位符/缺项会被 CI 拒绝；
 
 | 门禁 | RC 自动证据 | stable 真机证据 |
 | --- | --- | --- |
-| 身份/启动 | manifest profile/board；sysupgrade tar/squashfs | 硬件变体、secure boot 实测、board、MTD、active/fallback slot |
+| 身份/启动 | manifest profile/board/三项分区指纹；FIT DTB 解包；sysupgrade tar/squashfs | 暗云 preflight、真实 `xiaomi,ax9000-darkyun`、MTD/UBI、冷启动/UART、fallback |
 | 救援 | 官方主题/文档存在 | 厂商恢复或串口成功；错误镜像拒绝；救援耗时 |
 | 断电 | 无 | 刷写/启动关键阶段演练与恢复 PASS（受控测试） |
 | 管理面 | HTTPS redirect 与 preflight 内容检查 | 隔离有线首登、证书、SSH、WAN 扫描、救援主题 PASS |

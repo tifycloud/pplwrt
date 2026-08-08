@@ -10,5 +10,5 @@ tuna=https://mirrors.tuna.tsinghua.edu.cn/openwrt/releases/25.12.5
 
 Use official first. Switch to USTC or TUNA only after checking that the
 target/profile path and SHA256/manifest are identical; restore official before
-releasing. ImageBuilder's repositories file is the source of truth.
+releasing. The installed /etc/apk/repositories file is the source of truth.
 EOF

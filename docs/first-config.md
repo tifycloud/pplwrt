@@ -12,7 +12,7 @@
    ```
 
    所有 FAIL 必须解决；WARN 也写入验收记录。
-3. 人工核对 `ubus call system board` 是 `xiaomi,ax9000`、target 是
+3. 人工核对 `ubus call system board` 是 `xiaomi,ax9000-darkyun`、target 是
    `qualcommax/ipq807x`，再核对 `/etc/companywrt/build.conf` 和 VERSION。
 4. 保留官方 LuCI 主题；检查 uhttpd redirect/listener、WAN firewall UCI 和实际 nft rules。
 5. 逐个确认 DSA 端口、管理 IP、时区/NTP、监管域。先只启用 unicom，验证 IPv4/IPv6、

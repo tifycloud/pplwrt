@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Reconcile ImageBuilder CycloneDX with the exact resolved package inventory."""
+"""Reconcile OpenWrt CycloneDX with the exact resolved package inventory."""
 
 import argparse
 import json
@@ -69,7 +69,7 @@ def reconcile_packages(document: dict, packages: dict[str, str]) -> None:
     by_name: dict[str, list[dict]] = {}
     for component in components:
         if not isinstance(component, dict) or not isinstance(component.get("name"), str):
-            raise SystemExit("ImageBuilder SBOM contains an invalid component")
+            raise SystemExit("OpenWrt SBOM contains an invalid component")
         by_name.setdefault(component["name"], []).append(component)
 
     claimed_components: set[int] = set()
@@ -86,7 +86,7 @@ def reconcile_packages(document: dict, packages: dict[str, str]) -> None:
         if candidates:
             component = candidates[0]
         else:
-            # ImageBuilder 25.12.5 omits the libnghttp2 source component even
+            # OpenWrt 25.12.5 may omit the libnghttp2 source component even
             # though libnghttp2-14 is in the resolved APK manifest. Synthesize
             # an honest inventory record and make no unverified license claim.
             component = {
@@ -129,7 +129,7 @@ def main() -> None:
 
     document = json.loads(args.sbom.read_text(encoding="utf-8"))
     if document.get("bomFormat") != "CycloneDX" or not isinstance(document.get("components"), list):
-        raise SystemExit("ImageBuilder SBOM is not a supported CycloneDX document")
+        raise SystemExit("OpenWrt SBOM is not a supported CycloneDX document")
 
     packages = parse_package_manifest(args.package_manifest, args.expected_package_count)
     reconcile_packages(document, packages)

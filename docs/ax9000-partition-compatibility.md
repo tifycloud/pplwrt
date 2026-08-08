@@ -1,12 +1,14 @@
 # Xiaomi AX9000 “暗云 boot 大分区”与 OpenWrt 25.12.5 兼容性
 
-研究日期：2026-08-08。本文只做离线、只读分析，没有连接路由器、执行镜像或写入设备。
+研究与真机只读复核日期：2026-08-08。没有执行镜像、修改 UCI/Bootloader 或写入任何
+MTD/UBI；唯一的路由器端输出是 `/tmp` 下的临时、脱敏预检结果。
 
 ## 结论
 
-**当前结论是“证据不足，禁止刷写”。不要从现有 kwrt 直接刷官方/标准
-OpenWrt 25.12.5 `xiaomi_ax9000` 的 sysupgrade，也不要把官方
-`squashfs-factory.ubi` 上传到暗云 U-Boot Web。**
+**官方/标准 OpenWrt 25.12.5 AX9000 镜像仍然禁止刷写。真机已经通过仓库的暗云
+单 UBI 指纹预检，因此项目选择“保留现有 MIBIB/U-Boot，完整 Buildroot 定制 DTS 和
+单 UBI 升级路径”。只有专属 `xiaomi_ax9000_darkyun`、签名与内容门禁全部通过的 RC
+才可进入一次受控首刷；它在真机启动、回滚和网络矩阵验证前仍不等于生产 stable。**
 
 原因不是镜像型号不对，而是两套存储语义不同：
 
@@ -20,9 +22,9 @@ OpenWrt 25.12.5 `xiaomi_ax9000` 的 sysupgrade，也不要把官方
   volume 启动。若它实际扫描完整 232 MiB，大分区中同时存在两个独立 UBI 会与这一
   启动模型冲突。没有该“暗云 boot”的精确源码、发布说明或真机串口启动日志，不能
   假定它暗中把扫描范围截成官方所需的 56 MiB。
-- `sysupgrade` 使用的是**当前 kwrt** 中的 `/lib/upgrade/platform.sh` 和
-  `/lib/upgrade/nand.sh`，不是待刷镜像里的脚本。当前脚本、当前 DTS、当前 MTD/UBI
-  均未知，所以仅凭镜像文件名、`sysupgrade -T` 通过或“同型号别人刷过”不能放行。
+- 一次迁移实际使用的是**当前 kwrt** 中的 `sysupgrade`。真机已确认支持 `-T` 和 `-F`，
+  但仓库仍以独立首刷包装器强制执行 MIBIB/APPSBL、MTD/UBI、签名、SHA256、profile、
+  board 和嵌入 DTB 门禁；包装器只打印最终命令，不自动刷写。
 
 给定 MIBIB 与官方 DTS 在 `0x01180000` 之前的 boot chain/ART 区域基本对齐；官方
 代码不会主动写 MIBIB、APPSBL 或 ART，但会改 `0:APPSBLENV` 中的启动变量，并会把
@@ -99,7 +101,9 @@ nand_do_upgrade "$1"
 | `ax9000-mibib.bin` | 262144 B (`0x40000`) | `data` | `2d79c1b15b8946af733dba5fff5e33bf3ba18863ed734710bd2a5e48fc469c11` | `7332a1d396eb4c532ae5780f4072433f` |
 | `uboot-xiaomi-ax9000.bin` | 653422 B (`0x9f86e`) | ELF32 little-endian ARM, EABI5, statically linked/shared-object form | `80908e502add45ee6aa7ad83aa16ec2c3c8bf27b572ac0f9c3fe404b94fc0007` | `a81be2ac8775bcb3f13870352ad46155` |
 
-以上散列只识别下载文件，**不能证明真机目前烧录的是它们**。
+真机只读预检已确认：`0:mibib` 前 262144 B 与给定 MIBIB 散列一致，`0:appsbl` 和
+`0:appsbl_1` 前 653422 B 都与给定 U-Boot 散列一致。因此这两个散列现在同时是下载文件
+身份和本机当前 Bootloader 链的强制迁移指纹。
 
 ### MIBIB v4 解析
 
@@ -163,7 +167,7 @@ Web 页面字符串把 UI 项目链接到
 - Web “firmware update” 究竟写 `rootfs` 的哪个物理 offset/length；
 - 是否强制把 boot 扫描范围从 MIBIB 的 232 MiB 截成 56 MiB；
 - 是否接受 raw UBI、FIT、sysupgrade tar，是否会解析/剥离 ELF header；
-- 真机烧录的 U-Boot/MIBIB 是否就是给定文件。
+- Web 更新器是否接受任意格式仍未知；本项目明确不使用该 Web 更新器。
 
 在补齐这些证据前，**不得调用 U-Boot Web 的 firmware/uboot update，也不得用
 `mtd write`、`nandwrite`、`ubiformat` 或 `fw_setenv` 试探。**
@@ -198,7 +202,11 @@ Web 页面字符串把 UI 项目链接到
 | 当前 `/proc/mtd` 精确为 `ubi_kernel` 56 MiB + `rootfs` 182.5 MiB；live DT 与官方地址一致；当前 upgrade scripts 是官方 split 路径；串口证明 U-Boot 只扫描前 56 MiB kernel UBI；救援已实测 | **可在维护窗口考虑**；仍需 hash、`sysupgrade -T`、备份和串口 | 不需要 factory | **可直接 sysupgrade** |
 | 当前为一个 `rootfs` 232 MiB，Bootloader 也按一个大 UBI 读取 kernel/root | **不可用**；目标 kernel 的 split DTS 与大 UBI 冲突 | 官方 raw factory 也不能因名称相同就刷 | **需定制 DTS + OpenWrt Buildroot/source build**：保留 `0x01180000+0x0e800000` 单一 UBI，并配套单 UBI upgrade script；ImageBuilder 仅换包不够 |
 | 要回到官方 standard，而真机仍使用这份 232 MiB MIBIB | 先不刷 | 先不刷 | **必须先恢复经本机/批次验证的标准分区与 56 MiB boot 扫描边界**，再按官方 initramfs→sysupgrade 流程；这是高风险 MIBIB 操作，只能在 UART/TFTP/完整备份可恢复条件下做。给定 `ax9000-mibib.bin` 本身是大分区文件，不是标准恢复文件 |
-| 当前 MTD、live DT、当前脚本、installed MIBIB/U-Boot hash 或串口边界任一未知/不一致 | **禁止** | **禁止** | **证据不足禁止刷**（当前状态） |
+| 当前 MTD、live DT、当前脚本、installed MIBIB/U-Boot hash 任一未知/不一致 | **禁止** | **禁止** | **证据不足禁止刷** |
+
+本机属于第二行：预检确认 `rootfs=mtd21`、`0x0e800000`、eraseblock `0x20000`，没有
+`ubi_kernel`，一个 UBI 内仅有 `kernel/rootfs/rootfs_data`；MIBIB 与两个 APPSBL 副本
+也都匹配。因此仓库不会尝试恢复标准分区，而是只构建专属单 UBI sysupgrade。
 
 “定制 DTS”与“恢复标准分区”是二选一的存储模型，不能只改镜像文件名或只替换一个
 `platform.sh`。前者必须让 Bootloader、live DTS、factory 格式和后续 sysupgrade 始终
@@ -312,15 +320,20 @@ fw_printenv 2>&1
 - 是否有两个 UBI image/sequence 冲突、fallback slot 或认证失败；
 - Linux 随后创建的 MTD 地址是否与官方 fixed DTS 一致。
 
-在得到这组日志和当前脚本之前，本报告的禁止刷写结论不应放宽。
+完整 UART 日志仍是恢复演练和 stable 放行的重要证据，但不再用缺失的暗云作者源码替代
+真机已测指纹。首次 RC 刷写必须在有线维护窗口、备份和可用串口/Bootloader 救援条件下
+进行；真机启动证据会回填 production gate，之后才能发布 stable。
 
 ## 证据等级与剩余风险
 
 - **高置信**：官方 v25.12.5 DTS、image recipe、platform/nand upgrade 源码；官方 release
   目录、profiles 和 hashes；给定 MIBIB 的结构化离线解析。
 - **中置信**：给定 U-Boot 的静态 strings/binwalk 与公开 QSDK 同源 boot path 的匹配。
-- **未知/阻断**：暗云作者与精确源码、Web updater 行为、真机是否烧录给定 binary、当前
-  kwrt live DTS/UBI/upgrade scripts、secure boot/恢复能力。
+- **高置信（真机）**：当前单 `rootfs` MTD 几何、UBI volume 集、boot root、MIBIB 与两个
+  APPSBL 副本指纹，以及当前 `sysupgrade -T/-F` 选项；均由只读预检取得。
+- **未知/RC 风险**：暗云作者与精确源码、Web updater 行为、secure boot 细节和完整恢复
+  演练；项目不依赖 Web updater，剩余风险必须靠受控首刷和串口/启动证据关闭。
 
-因此当前唯一可审核的最终决策仍是：**证据不足，禁止刷；先采证，再在“完整定制大分区
-Buildroot”与“恢复标准分区后走官方流程”之间选择。**
+因此当前可审核决策是：**标准镜像永久拒绝；完整定制大分区 Buildroot 路线已经获得真机
+前置证据。待专属 RC 的真实编译、DTB/rootfs/签名/attestation 检查全部通过后，可交付用户
+进行一次受控首刷；首刷成功和硬件矩阵未回填前，不发布 production stable。**

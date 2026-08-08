@@ -11,7 +11,7 @@ terms. The generated package manifest and CycloneDX SBOM are the authoritative
 per-build inventory; APK metadata inside the image records package licenses.
 The build verifies one-to-one inventory coverage from all 251 resolved APK
 package names to CycloneDX upstream components. This is not a claim that every
-license conclusion is complete: when ImageBuilder omits a source component or
+license conclusion is complete: when OpenWrt omits a source component or
 license assertion (notably the libnghttp2-14 package in 25.12.5), the augmented
 SBOM records an inventory component with `NOASSERTION`. Consult the pinned APK
 metadata, corresponding source archive and license files before redistribution.
@@ -44,7 +44,7 @@ Only dependencies available from the official OpenWrt feeds are selected; see
 docs/openclash.md for upstream links and the runtime installation boundary.
 
 The package Makefiles under packages/ describe future SDK packages, but the
-current ImageBuilder pipeline does not compile or install them as APKs. Their
+current Buildroot pipeline does not compile or install them as APKs. Their
 `root/` trees are copied explicitly as named `*-overlay` components, are loaded
 by LuCI at runtime, and are represented in CUSTOM-COMPONENTS.manifest, the
 release manifest, NOTICE and augmented CycloneDX SBOM. This naming avoids a

@@ -79,6 +79,23 @@ else
 	exit 1
 fi
 
+if [ -n "${DUMPIMAGE:-}" ]; then
+	DUMPIMAGE_BIN=$DUMPIMAGE
+elif command -v dumpimage >/dev/null 2>&1; then
+	DUMPIMAGE_BIN=$(command -v dumpimage)
+else
+	echo 'dumpimage is required for embedded kernel FIT inspection' >&2
+	exit 1
+fi
+if [ -n "${DTC:-}" ]; then
+	DTC_BIN=$DTC
+elif command -v dtc >/dev/null 2>&1; then
+	DTC_BIN=$(command -v dtc)
+else
+	echo 'dtc is required for embedded device-tree inspection' >&2
+	exit 1
+fi
+
 TMP=$(mktemp -d "${TMPDIR:-/tmp}/companywrt-inspect.XXXXXX")
 cleanup() { rm -rf "$TMP"; }
 trap cleanup EXIT INT TERM
@@ -89,13 +106,31 @@ tar tvf "$IMAGE" | awk 'substr($1, 1, 1) != "d" && substr($1, 1, 1) != "-" { exi
 awk '
 	/^\// || /(^|\/)\.\.($|\/)/ { print "unsafe sysupgrade tar path: " $0 > "/dev/stderr"; exit 1 }
 	NF { split($0, p, "/"); if (top == "") top = p[1]; else if (top != p[1]) exit 1 }
-	END { if (top != "sysupgrade-xiaomi_ax9000") exit 1 }
+	END { if (top != "sysupgrade-xiaomi_ax9000_darkyun") exit 1 }
 ' "$TMP/tar.list" || { echo 'unexpected/unsafe sysupgrade archive layout' >&2; exit 1; }
 for member in CONTROL kernel root; do
-	grep -qx "sysupgrade-xiaomi_ax9000/$member" "$TMP/tar.list" || { echo "missing sysupgrade member: $member" >&2; exit 1; }
+	grep -qx "sysupgrade-xiaomi_ax9000_darkyun/$member" "$TMP/tar.list" || { echo "missing sysupgrade member: $member" >&2; exit 1; }
 done
 tar xf "$IMAGE" -C "$TMP"
-ROOTFS="$TMP/sysupgrade-xiaomi_ax9000/root"
+SYSUPGRADE_DIR="$TMP/sysupgrade-xiaomi_ax9000_darkyun"
+ROOTFS="$SYSUPGRADE_DIR/root"
+KERNEL="$SYSUPGRADE_DIR/kernel"
+
+"$DUMPIMAGE_BIN" -l "$KERNEL" > "$TMP/fit.list"
+FDT_INDEXES=$(sed -n 's/^[[:space:]]*Image \([0-9][0-9]*\) (fdt[^)]*)$/\1/p' "$TMP/fit.list")
+[ "$(printf '%s\n' "$FDT_INDEXES" | sed '/^$/d' | wc -l | tr -d '[:space:]')" -eq 1 ] || { echo 'kernel FIT must contain exactly one fdt image' >&2; exit 1; }
+FDT_INDEX=$(printf '%s\n' "$FDT_INDEXES" | sed -n '1p')
+"$DUMPIMAGE_BIN" -T flat_dt -p "$FDT_INDEX" -o "$TMP/kernel.dtb" "$KERNEL"
+[ -s "$TMP/kernel.dtb" ] || { echo 'failed to extract kernel device tree' >&2; exit 1; }
+"$DTC_BIN" -I dtb -O dts "$TMP/kernel.dtb" > "$TMP/kernel.dts"
+grep -Fq 'xiaomi,ax9000-darkyun' "$TMP/kernel.dts" || { echo 'kernel DT does not identify the Darkyun AX9000 board' >&2; exit 1; }
+grep -Fq 'root=/dev/ubiblock0_1' "$TMP/kernel.dts" || { echo 'kernel DT does not boot the single-UBI rootfs volume' >&2; exit 1; }
+grep -Eq 'reg = <0x0*1180000 0x0*e800000>;' "$TMP/kernel.dts" || { echo 'kernel DT rootfs partition is not 0x01180000+0x0e800000' >&2; exit 1; }
+grep -Eq 'reg = <0x0*f980000 0x0*80000>;' "$TMP/kernel.dts" || { echo 'kernel DT cfg_bak partition is not 0x0f980000+0x00080000' >&2; exit 1; }
+if grep -Fq 'ubi_kernel' "$TMP/kernel.dts"; then
+	echo 'kernel DT still contains the incompatible split-layout ubi_kernel partition' >&2
+	exit 1
+fi
 file "$ROOTFS" | grep -qi 'Squashfs filesystem' || { echo 'sysupgrade root is not squashfs' >&2; exit 1; }
 "$UNSQUASHFS_BIN" -ll "$ROOTFS" > "$TMP/rootfs.list"
 if grep -Eq '/\.DS_Store([[:space:]]|$)' "$TMP/rootfs.list"; then
@@ -116,6 +151,7 @@ rootfs_cat() {
 REQUIRED_FILES='
 /etc/companywrt/VERSION
 /etc/companywrt/build.conf
+/etc/companywrt/device-layout.json
 /etc/companywrt/keys/release.pub
 /etc/shadow
 /etc/config/collectd
@@ -128,6 +164,7 @@ REQUIRED_FILES='
 /usr/share/company/ota-check
 /usr/share/company/ota-apply
 /usr/share/company/enrollment-preflight
+/usr/share/company/ax9000-darkyun-preflight
 /usr/share/company/LICENSE
 /usr/share/company/NOTICE
 /usr/share/company/CUSTOM-COMPONENTS.manifest
@@ -141,9 +178,13 @@ done
 
 [ "$(rootfs_cat /etc/companywrt/VERSION | sed -n '1p')" = "$EXPECTED_VERSION" ] || { echo 'embedded VERSION mismatch' >&2; exit 1; }
 rootfs_cat /etc/companywrt/build.conf > "$TMP/build.conf"
-grep -qx 'PROFILE=xiaomi_ax9000' "$TMP/build.conf" || { echo 'embedded PROFILE mismatch' >&2; exit 1; }
+grep -qx 'PROFILE=xiaomi_ax9000_darkyun' "$TMP/build.conf" || { echo 'embedded PROFILE mismatch' >&2; exit 1; }
+grep -qx 'BOARD=xiaomi,ax9000-darkyun' "$TMP/build.conf" || { echo 'embedded BOARD mismatch' >&2; exit 1; }
+grep -qx 'PARTITION_VARIANT=darkyun-large-ubi-v1' "$TMP/build.conf" || { echo 'embedded partition variant mismatch' >&2; exit 1; }
 grep -qx 'RELEASE=25.12.5' "$TMP/build.conf" || { echo 'embedded OpenWrt RELEASE mismatch' >&2; exit 1; }
-[ "$(wc -l < "$TMP/build.conf" | tr -d '[:space:]')" -eq 3 ] || { echo 'embedded build metadata has unexpected/self-referential fields' >&2; exit 1; }
+[ "$(wc -l < "$TMP/build.conf" | tr -d '[:space:]')" -eq 5 ] || { echo 'embedded build metadata has unexpected/self-referential fields' >&2; exit 1; }
+rootfs_cat /etc/companywrt/device-layout.json > "$TMP/device-layout.json"
+cmp "$ROOT/devices/ax9000/darkyun-large-ubi.json" "$TMP/device-layout.json" || { echo 'embedded Darkyun device specification mismatch' >&2; exit 1; }
 rootfs_cat /etc/companywrt/keys/release.pub > "$TMP/release.pub"
 cmp "$ROOT/keys/companywrt-release.pub" "$TMP/release.pub" || { echo 'embedded release public key mismatch' >&2; exit 1; }
 rootfs_cat /etc/shadow > "$TMP/shadow"
@@ -186,7 +227,7 @@ for rule in Allow-DHCP-Renew Allow-Ping Allow-DHCPv6 Allow-ICMPv6-Input Allow-IC
 	grep -Eq "option[[:space:]]+name[[:space:]]+$rule$" "$TMP/firewall" || { echo "default firewall rule missing: $rule" >&2; exit 1; }
 done
 rootfs_cat /etc/board.d/02_network > "$TMP/board-network"
-grep -q 'xiaomi,ax9000' "$TMP/board-network" || { echo 'AX9000 board network mapping is missing' >&2; exit 1; }
+grep -q 'xiaomi,ax9000-darkyun' "$TMP/board-network" || { echo 'Darkyun AX9000 board network mapping is missing' >&2; exit 1; }
 grep -q 'ucidef_set_interfaces_lan_wan "lan1 lan2 lan3 lan4" "wan"' "$TMP/board-network" || { echo 'AX9000 DSA LAN/WAN mapping is missing' >&2; exit 1; }
 rootfs_cat /bin/config_generate > "$TMP/config-generate"
 grep -q "set network.loopback='interface'" "$TMP/config-generate" || { echo 'default loopback generation is missing' >&2; exit 1; }
@@ -214,7 +255,8 @@ fi
 	printf 'CompanyWrt firmware content inspection\n'
 	printf 'image=%s\n' "$(basename "$IMAGE")"
 	printf 'image_sha256=%s\n' "$IMAGE_DIGEST"
-	printf 'version=%s\nprofile=xiaomi_ax9000\nboard=xiaomi,ax9000\n' "$EXPECTED_VERSION"
+	printf 'version=%s\nprofile=xiaomi_ax9000_darkyun\nboard=xiaomi,ax9000-darkyun\n' "$EXPECTED_VERSION"
+	printf 'partition_variant=darkyun-large-ubi-v1\nkernel_dtb_layout=PASS\n'
 	printf 'sysupgrade_layout=PASS\nsquashfs_root=PASS\nrequired_files=PASS\nrequired_packages=PASS\n'
 	printf 'https_redirect=PASS\nwan_accept_rule_embedded=NO\ndefault_password_embedded=NO\n'
 	printf 'root_password_state=%s\nembedded_usign_key_id=%s\n' "$ROOT_PASSWORD_STATE" "$EMBEDDED_KEY_ID"

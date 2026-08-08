@@ -1,7 +1,7 @@
 # CompanyWrt UI
 
 `luci-app-company-overlay` 提供只读 dashboard，`luci-theme-company-overlay` 提供局部、
-响应式、深色/减少动画/键盘可访问 CSS。它们由 ImageBuilder FILES overlay 安装，
+响应式、深色/减少动画/键盘可访问 CSS。它们由 Buildroot `files/` overlay 安装，
 当前不是 APK；实际路径与内容由固件解包测试核验。
 
 页面读取 `/etc/companywrt/VERSION`、build.conf、company/pbr/firewall/uhttpd UCI：

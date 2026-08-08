@@ -97,7 +97,7 @@ jobs:
             }
             ./scripts/verify-production-gate.sh "$evidence" "$version"
           fi
-          ./scripts/build-imagebuilder.sh --channel "$channel" --print-output >/dev/null
+          ./scripts/build-buildroot.sh --channel "$channel" --print-output >/dev/null
           {
             echo "version=$version"
             echo "channel=$channel"
@@ -183,8 +183,12 @@ jobs:
             printf '%s\n' "$CURRENT_USIGN_SECRET_KEY" > "$current_key"
             echo "USIGN_SECRET_KEY_FILE=$current_key" >> "$GITHUB_ENV"
           fi
-      - name: Install build and inspection dependencies
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends file jq shellcheck squashfs-tools
+      - name: Install full OpenWrt Buildroot and inspection dependencies
+        run: >-
+          sudo apt-get update && sudo apt-get install -y --no-install-recommends
+          build-essential bzip2 clang file flex bison g++ gawk gcc-multilib gettext git jq
+          libncurses-dev libssl-dev patch perl python3 python3-setuptools rsync shellcheck
+          squashfs-tools subversion swig unzip wget zlib1g-dev zstd
       - name: Run source checks
         shell: bash
         run: |
@@ -193,19 +197,19 @@ jobs:
           for test_script in tests/ax9000/test-*.sh; do
             "$test_script"
           done
-      - name: Build signed official ImageBuilder image
+      - name: Build signed Darkyun large-UBI firmware from pinned OpenWrt source
         shell: bash
         run: |
           set -euo pipefail
           arguments=(
-            --profile xiaomi_ax9000
+            --profile xiaomi_ax9000_darkyun
             --channel '${{ needs.authorize.outputs.channel }}'
             --source-commit '${{ needs.authorize.outputs.source_commit }}'
           )
           if [[ '${{ needs.authorize.outputs.channel }}' == stable ]]; then
             arguments+=(--production-gate 'production-gates/${{ needs.authorize.outputs.version }}.env')
           fi
-          ./scripts/build-imagebuilder.sh "${arguments[@]}"
+          ./scripts/build-buildroot.sh "${arguments[@]}"
       - name: Recheck hardware evidence binding or explicit RC-only status
         shell: bash
         run: |
@@ -250,7 +254,7 @@ jobs:
             --public-key "$public_key" \
             --download-dir "$RUNNER_TEMP/ota-e2e" \
             --version '${{ needs.authorize.outputs.version }}' \
-            --profile xiaomi_ax9000 --board xiaomi,ax9000 \
+            --profile xiaomi_ax9000_darkyun --board xiaomi,ax9000-darkyun \
             --channel '${{ needs.authorize.outputs.channel }}'
           if [[ '${{ needs.authorize.outputs.version }}' == "$transition_version" ]]; then
             PATH="$usign_dir:$PATH" usign -q -V \

@@ -3,7 +3,17 @@
 ## 25.12.5-company.2-rc2 — 2026-08-08
 
 **Release candidate / NOT PRODUCTION.** 仍无 AX9000 真机 production-gate 证据；本轮只加固
-静态、构建、签名与发布门禁，不创建 stable tag。
+静态、构建、签名与发布门禁，不创建 stable tag。RC2 尚未发布，随后根据实机证据把
+构建目标改为暗云 Boot 单 UBI 专属变体。
+
+- 真机只读确认 MIBIB 为 `rootfs=0x01180000+0x0e800000`，两个 APPSBL 指纹一致，运行时
+  为单 UBI `kernel/rootfs/rootfs_data`；历史标准布局 RC 明确禁止刷入。
+- 从官方 ImageBuilder 切换为固定 OpenWrt 25.12.5/feeds commit 的完整 Buildroot；新增
+  `xiaomi_ax9000_darkyun` DTS/profile/board/upgrade patch，不生成 factory 镜像。
+- 新增 MIBIB/APPSBL/MTD/UBI 只读迁移 preflight；release manifest、OTA、production gate
+  绑定专属 board、partition variant 和 bootloader 指纹。
+- inspector 从 sysupgrade FIT 提取 DTB，拒绝 `ubi_kernel`，要求 232 MiB rootfs、cfg_bak、
+  `/dev/ubiblock0_1` 与专属 compatible 全部吻合。
 
 - 发布必须使用 annotated `v$VERSION` tag，且 peeled commit 与实时拉取的受保护
   `origin/main` HEAD 精确相等；签名 job 绑定 `firmware-signing` environment（审批、冷却、

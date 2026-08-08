@@ -11,7 +11,10 @@ grep -Eq 'APPROVED_FOR_STABLE|VERSION mismatch' "$TMP/template.err"
 cat > "$TMP/evidence.env" <<'EOF'
 APPROVED_FOR_STABLE=YES
 VERSION=25.12.5-company.2
-BOARD=xiaomi,ax9000
+BOARD=xiaomi,ax9000-darkyun
+PARTITION_VARIANT=darkyun-large-ubi-v1
+MIBIB_SHA256=2d79c1b15b8946af733dba5fff5e33bf3ba18863ed734710bd2a5e48fc469c11
+APPSBL_SHA256=80908e502add45ee6aa7ad83aa16ec2c3c8bf27b572ac0f9c3fe404b94fc0007
 HARDWARE_VARIANT=CN-label-observed
 HARDWARE_EVIDENCE_ID=hw-record-fixture-001
 SERIAL_EVIDENCE_ID=serial-record-redacted-001

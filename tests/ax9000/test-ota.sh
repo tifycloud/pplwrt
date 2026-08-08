@@ -40,7 +40,7 @@ cat > "$MOCK/ubus" <<'EOF'
 #!/bin/sh
 [ "$*" = 'call system board' ] || exit 1
 cat <<JSON
-{"board_name":"${TEST_BOARD:-xiaomi,ax9000}","release":{"version":"25.12.5","target":"qualcommax/ipq807x"}}
+{"board_name":"${TEST_BOARD:-xiaomi,ax9000-darkyun}","release":{"version":"25.12.5","target":"qualcommax/ipq807x"}}
 JSON
 EOF
 
@@ -48,7 +48,7 @@ cat > "$MOCK/jsonfilter" <<'EOF'
 #!/bin/sh
 [ "${1:-}" = -e ] || exit 2
 case "$2" in
-	@.board_name) echo "${TEST_BOARD:-xiaomi,ax9000}" ;;
+	@.board_name) echo "${TEST_BOARD:-xiaomi,ax9000-darkyun}" ;;
 	@.release.version) echo 25.12.5 ;;
 	@.release.target) echo qualcommax/ipq807x ;;
 	*) exit 1 ;;
@@ -65,13 +65,17 @@ chmod 0755 "$MOCK"/*
 printf 'signed firmware fixture\n' > "$TMP/image.bin"
 IMAGE_SHA=$(sha256sum "$TMP/image.bin" | awk '{print $1}')
 IMAGE_SIZE=$(wc -c < "$TMP/image.bin" | tr -d '[:space:]')
-IMAGE_NAME='openwrt-25.12.5-companywrt-rc-qualcommax-ipq807x-xiaomi_ax9000-squashfs-sysupgrade.bin'
+IMAGE_NAME='openwrt-25.12.5-qualcommax-ipq807x-xiaomi_ax9000_darkyun-squashfs-sysupgrade.bin'
 cat > "$TMP/manifest" <<EOF
-FORMAT=companywrt-release-v1
+FORMAT=companywrt-darkyun-release-v1
 VERSION=25.12.5-company.2-rc1
 OPENWRT_RELEASE=25.12.5
-PROFILE=xiaomi_ax9000
-BOARD=xiaomi,ax9000
+PROFILE=xiaomi_ax9000_darkyun
+BOARD=xiaomi,ax9000-darkyun
+PARTITION_VARIANT=darkyun-large-ubi-v1
+MIBIB_SHA256=2d79c1b15b8946af733dba5fff5e33bf3ba18863ed734710bd2a5e48fc469c11
+APPSBL_SHA256=80908e502add45ee6aa7ad83aa16ec2c3c8bf27b572ac0f9c3fe404b94fc0007
+MIGRATION_BOARD=xiaomi,ax9000
 CHANNEL=rc
 TAG=v25.12.5-company.2-rc1
 SOURCE_COMMIT=0123456789abcdef0123456789abcdef01234567
@@ -88,18 +92,22 @@ sha256sum "$TMP/manifest" | awk '{print $1}' > "$TMP/manifest.sig"
 PATH="$MOCK:$PATH" "$ROOT/scripts/ota-check.sh" \
 	--manifest "$TMP/manifest" --signature "$TMP/manifest.sig" --image "$TMP/image.bin" \
 	--public-key "$ROOT/keys/companywrt-release.pub" --download-dir "$TMP/checked" \
-	--version 25.12.5-company.2-rc1 --profile xiaomi_ax9000 --board xiaomi,ax9000 --channel rc \
+	--version 25.12.5-company.2-rc1 --profile xiaomi_ax9000_darkyun --board xiaomi,ax9000-darkyun --channel rc \
 	> "$TMP/check.out"
 grep -q 'VERIFIED_SHA256='"$IMAGE_SHA" "$TMP/check.out"
 grep -q 'No router state was changed' "$TMP/check.out"
 cmp "$TMP/image.bin" "$TMP/checked/$IMAGE_NAME"
 
 cat > "$TMP/stable.manifest" <<EOF
-FORMAT=companywrt-release-v2
+FORMAT=companywrt-darkyun-release-v2
 VERSION=25.12.5-company.2
 OPENWRT_RELEASE=25.12.5
-PROFILE=xiaomi_ax9000
-BOARD=xiaomi,ax9000
+PROFILE=xiaomi_ax9000_darkyun
+BOARD=xiaomi,ax9000-darkyun
+PARTITION_VARIANT=darkyun-large-ubi-v1
+MIBIB_SHA256=2d79c1b15b8946af733dba5fff5e33bf3ba18863ed734710bd2a5e48fc469c11
+APPSBL_SHA256=80908e502add45ee6aa7ad83aa16ec2c3c8bf27b572ac0f9c3fe404b94fc0007
+MIGRATION_BOARD=xiaomi,ax9000
 CHANNEL=stable
 TAG=v25.12.5-company.2
 SOURCE_COMMIT=0123456789abcdef0123456789abcdef01234567
@@ -120,7 +128,7 @@ sha256sum "$TMP/stable.manifest" | awk '{print $1}' > "$TMP/stable.sig"
 PATH="$MOCK:$PATH" "$ROOT/scripts/ota-check.sh" \
 	--manifest "$TMP/stable.manifest" --signature "$TMP/stable.sig" --image "$TMP/image.bin" \
 	--public-key "$ROOT/keys/companywrt-release.pub" --download-dir "$TMP/stable-checked" \
-	--version 25.12.5-company.2 --profile xiaomi_ax9000 --board xiaomi,ax9000 --channel stable \
+	--version 25.12.5-company.2 --profile xiaomi_ax9000_darkyun --board xiaomi,ax9000-darkyun --channel stable \
 	> "$TMP/stable.out"
 grep -q 'VERIFIED_HARDWARE_VALIDATION=VERIFIED' "$TMP/stable.out"
 grep -q 'VERIFIED_PRODUCTION_GATE_SHA256=aaaaaaaa' "$TMP/stable.out"
@@ -172,7 +180,7 @@ cp "$TMP/manifest" "$TMP/duplicate.manifest"
 printf 'VERSION=25.12.5-company.2-rc1\n' >> "$TMP/duplicate.manifest"
 sha256sum "$TMP/duplicate.manifest" | awk '{print $1}' > "$TMP/duplicate.sig"
 expect_check_fail duplicate "$TMP/duplicate.manifest" "$TMP/duplicate.sig" "$TMP/image.bin"
-grep -Eq 'duplicate manifest field|exactly 15 fields' "$TMP/duplicate.err"
+grep -Eq 'duplicate manifest field|exactly 19 fields' "$TMP/duplicate.err"
 
 cp "$TMP/manifest.sig" "$TMP/bad.sig"
 printf 'bad\n' > "$TMP/bad.sig"
@@ -187,7 +195,9 @@ fi
 grep -q 'plain HTTP is forbidden' "$TMP/http.err"
 
 cat > "$TMP/device/etc/companywrt/build.conf" <<'EOF'
-PROFILE=xiaomi_ax9000
+PROFILE=xiaomi_ax9000_darkyun
+BOARD=xiaomi,ax9000-darkyun
+PARTITION_VARIANT=darkyun-large-ubi-v1
 RELEASE=25.12.5
 CHANNEL=rc
 EOF

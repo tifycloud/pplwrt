@@ -1,17 +1,19 @@
 # CompanyWrt（小米 AX9000 企业边界候选固件）
 
-CompanyWrt 是基于官方 OpenWrt **25.12.5**、`qualcommax/ipq807x`、标准
-`xiaomi_ax9000` profile 的可审计 ImageBuilder 工程。当前版本是
+CompanyWrt 是基于官方 OpenWrt **25.12.5**、`qualcommax/ipq807x` 的可审计企业固件。
+本仓库当前唯一可构建目标是为用户实机验证的暗云 Boot 单 UBI 大分区新建的
+`xiaomi_ax9000_darkyun` profile；它不是官方标准 `xiaomi_ax9000` 镜像。当前版本是
 **25.12.5-company.2-rc2**：它是 release candidate，**不是生产稳定版**。
 在真实 AX9000 完成刷写/救援/断电/双 WAN/无线/安全门禁前只能用于实验室。
 
-> 固件文件名相似不等于设备兼容。错误变体、secure boot 状态、分区或启动槽
-> 可能导致变砖。当前从 kwrt 迁移的设备必须先按 [刷机与救援](docs/flash.md)
-> 收集 board、MTD、boot slot 和恢复证据，不能直接运行 sysupgrade。
+> 官方标准 AX9000 镜像和历史 `company.1/company.2-rc1` 都与本机单 UBI 布局不兼容，
+> **禁止刷入**。第一次迁移必须先运行只读 `ax9000-darkyun-preflight`，并完成签名、DTB、
+> 救援和人工刷机门禁；仓库绝不自动执行 sysupgrade。
 
 ## 构建与信任链
 
-发布构建固定官方 ImageBuilder URL/SHA，使用仓库外的 `usign` 私钥签署严格
+发布构建固定官方 OpenWrt tag/commit 与已锁定 feed commit，应用一份可审计设备补丁，
+通过完整 Buildroot 编译内核、DTB 和 sysupgrade，再使用仓库外的 `usign` 私钥签署严格
 `RELEASE-MANIFEST`；固件内只嵌入 [当前公开验证密钥](keys/companywrt-release.pub)。
 私钥不得进入 git、overlay、日志或 artifact。
 
@@ -22,7 +24,7 @@ RC2 是显式 usign 轮换过渡：旧 RC1 key 对主 manifest 签名，保证 R
 ```sh
 export USIGN_SECRET_KEY_FILE=/secure/outside/repository/companywrt-usign-previous.key
 export USIGN_CURRENT_SECRET_KEY_FILE=/secure/outside/repository/companywrt-usign-current.key
-./scripts/build-in-container.sh --profile xiaomi_ax9000 --channel rc
+./scripts/build-in-container.sh --profile xiaomi_ax9000_darkyun --channel rc
 cd artifacts/rc/25.12.5-company.2-rc2
 sha256sum -c SHA256SUMS
 ```
@@ -44,7 +46,7 @@ contents-write publish job 分离。RC tag 自动发布 immutable prerelease。�
 - WireGuard、logd 远程日志能力和轻量 collectd 监控基础预装；密钥、collector、
   VLAN 和租户配置不入镜像。SQM 不预装，移动链路有审阅模板，联通默认禁用。
 - OpenClash 本体、mihomo 核心、订阅与规则不打包，只预装官方 feed 可解析依赖。
-- 自定义 LuCI/脚本当前以 ImageBuilder `FILES` overlay 安装，明确命名为
+- 自定义 LuCI/脚本当前以 Buildroot `files/` overlay 安装，明确命名为
   `*-overlay`；仓库中的 Makefile 不是已构建 APK 的声明。
 - 官方 LuCI 主题始终保留为救援入口；Wi-Fi 配置值为 HE80，HE160 只做专项实测。
 
