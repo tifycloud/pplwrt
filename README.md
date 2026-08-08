@@ -52,5 +52,6 @@ contents-write publish job 继续分离。RC tag 自动发布 immutable prerelea
   `*-overlay`；仓库中的 Makefile 不是已构建 APK 的声明。
 - 官方 LuCI 主题始终保留为救援入口；Wi-Fi 配置值为 HE80，HE160 只做专项实测。
 
-从 [文档导航](docs/README.md) 开始，刷写前必读 [安全基线](docs/security.md)、
+从 [文档导航](docs/README.md) 开始。准备迁移这台已采证的暗云 Boot AX9000 时，按
+[全新安装教程](docs/fresh-install.md)执行；刷写前同时必读 [安全基线](docs/security.md)、
 [OTA](docs/ota.md) 和 [生产测试矩阵](docs/test-matrix.md)。
