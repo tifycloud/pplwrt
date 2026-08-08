@@ -1,0 +1,23 @@
+config globals 'globals'
+	option alt_config_file '/etc/collectd.conf'
+
+# Monitoring capability is preinstalled but deliberately dormant. Enable only
+# reviewed read plugins and a management-VLAN/WireGuard server destination.
+config plugin 'cpu'
+	option enable '0'
+
+config plugin 'interface'
+	option enable '0'
+
+config plugin 'load'
+	option enable '0'
+
+config plugin 'memory'
+	option enable '0'
+
+config plugin 'network'
+	option enable '0'
+	option Forward '0'
+
+config plugin 'uptime'
+	option enable '0'

@@ -1,0 +1,101 @@
+<%
+local fs = require "nixio.fs"
+local uci = require("luci.model.uci").cursor()
+local util = require "luci.util"
+
+local function clean(value, fallback)
+	value = tostring(value or ""):gsub("%s+$", "")
+	if value == "" or value:find("[^%w%._,/-]") then return fallback end
+	return value
+end
+
+local version = clean(fs.readfile("/etc/companywrt/VERSION"), "未知版本")
+local build_conf = fs.readfile("/etc/companywrt/build.conf") or ""
+local channel = clean(build_conf:match("\n?CHANNEL=([^\n]+)"), uci:get("company", "main", "channel") or "未知")
+local wifi_mode = clean(uci:get("company", "main", "wifi_mode"), "未配置")
+local pbr_enabled = uci:get("pbr", "config", "enabled") == "1"
+local pbr_state = pbr_enabled and "配置已启用" or "未启用/未安装"
+local pbr_detail = pbr_enabled and "运行与策略命中仍需现场验证" or "生成并审阅策略计划后再启用"
+
+local wan_seen, wan_reject, wan_masq = false, false, false
+uci:foreach("firewall", "zone", function(zone)
+	if zone.name == "wan" then
+		wan_seen = true
+		wan_reject = zone.input == "REJECT" or zone.input == "DROP"
+		wan_masq = zone.masq == "1"
+	end
+end)
+local firewall_state = wan_seen and wan_reject and "配置为拒绝" or "未验证/需检查"
+local firewall_detail = wan_seen and wan_reject and "仅代表 UCI 配置，运行规则待核验" or "运行 enrollment-preflight 后再验收"
+local https_redirect = uci:get("uhttpd", "main", "redirect_https") == "1"
+local https_listener = uci:get("uhttpd", "main", "listen_https")
+local https_configured = https_redirect and https_listener ~= nil
+local https_state = https_configured and "HTTPS 已配置" or "HTTPS 待修复"
+local nat_state = wan_seen and wan_masq and "UCI 已配置" or "未验证"
+local esc = util.pcdata
+%>
+<%+header%>
+<link rel="stylesheet" href="/luci-static/company/css/company.css" />
+<div class="company-shell company-dashboard" id="company-dashboard">
+  <a class="company-skip-link" href="#company-content">跳转到主要内容</a>
+  <header class="company-header">
+    <div class="company-brand-mark" aria-hidden="true">CW</div>
+    <div class="company-header-copy">
+      <p class="company-eyebrow">OPERATIONS CONSOLE · AX9000</p>
+      <h1>CompanyWrt</h1>
+      <p>企业网络运行总览 <span class="company-dot">·</span> 只读安全入口</p>
+    </div>
+    <div class="company-header-meta company-header-meta-warn"><span class="company-live-dot" aria-hidden="true"></span><span>候选配置 · 未验收</span><small><%=esc(version)%> / <%=esc(channel)%></small></div>
+  </header>
+
+  <main id="company-content" tabindex="-1">
+    <section class="company-kpis" aria-label="系统状态摘要">
+    <div class="company-kpi company-kpi-warn"><span class="company-kpi-label">设备状态</span><strong>待现场验收</strong><span>运行 enrollment-preflight 与真机门禁</span></div>
+    <div class="company-kpi <%=wan_reject and 'company-kpi-neutral' or 'company-kpi-warn'%>"><span class="company-kpi-label">WAN 防火墙</span><strong><%=esc(firewall_state)%></strong><span><%=esc(firewall_detail)%></span></div>
+    <div class="company-kpi company-kpi-neutral"><span class="company-kpi-label">无线配置值</span><strong><%=esc(wifi_mode)%></strong><span>HE160 仅限专项测试；监管域、BDF 与射频表现尚未验收</span></div>
+    <div class="company-kpi company-kpi-warn"><span class="company-kpi-label">OTA 候选</span><strong><%=esc(channel)%> / 人工门禁</strong><span>usign、大小、SHA、board 与 sysupgrade -T 必检</span></div>
+    </section>
+
+  <div class="company-section-heading"><div><p class="company-eyebrow">CONTROL PLANE</p><h2>策略与服务</h2></div><span class="company-readonly">只读视图</span></div>
+  <div class="company-grid company-grid-main">
+    <section class="company-card company-card-wide">
+      <div class="company-card-heading"><div><span class="company-icon company-icon-route" aria-hidden="true">↗</span><h3>双 WAN 策略</h3></div><span class="company-pill <%=pbr_enabled and 'company-pill-neutral' or 'company-pill-warn'%>"><%=esc(pbr_state)%></span></div>
+      <p class="company-card-lead">规划按源/目的地址和端口选择出口；是否正确保持会话仍需连接跟踪与现场流量验证。</p>
+      <div class="company-flow" aria-label="LAN 到双 WAN 的策略流向">
+        <div class="company-flow-node"><b>office</b><small>默认出口待验证</small></div><span class="company-flow-line"></span><div class="company-flow-node"><b>PBR</b><small><%=esc(pbr_detail)%></small></div><span class="company-flow-line"></span><div class="company-flow-split"><div><b>unicom</b><small>1G · 默认规划</small></div><div><b>mobile</b><small>100M · 稳定上传规划</small></div></div>
+      </div>
+      <p class="company-note">基础版不安装 mwan3。为 OpenClash 保留独立 mark/table，避免规则所有权冲突。</p>
+      <div class="company-actions"><a class="company-button" href="<%=url('admin','network','interfaces')%>">查看接口 <span aria-hidden="true">→</span></a><a class="company-button company-button-quiet" href="<%=url('admin','services','pbr')%>">审阅 PBR</a></div>
+    </section>
+    <section class="company-card">
+      <div class="company-card-heading"><div><span class="company-icon company-icon-shield" aria-hidden="true">!</span><h3>安全配置快照</h3></div><span class="company-pill <%=wan_reject and 'company-pill-neutral' or 'company-pill-warn'%>"><%=esc(firewall_state)%></span></div>
+      <dl class="company-facts"><div><dt>WAN 入口（配置）</dt><dd><%=esc(firewall_state)%></dd></div><div><dt>管理协议（配置）</dt><dd><%=esc(https_state)%></dd></div><div><dt>NAT（配置）</dt><dd><%=esc(nat_state)%></dd></div></dl>
+      <p class="company-note">以上仅从 UCI 读取，不代表 nftables 运行状态、证书信任或外网渗透验收。</p>
+      <div class="company-actions"><a class="company-button company-button-quiet" href="<%=url('admin','network','firewall')%>">查看防火墙</a></div>
+    </section>
+    <section class="company-card">
+      <div class="company-card-heading"><div><span class="company-icon company-icon-branch" aria-hidden="true">◇</span><h3>OpenClash 边界</h3></div><span class="company-pill company-pill-warn">按需安装</span></div>
+      <p class="company-card-lead">依赖预装，本体、mihomo 核心与订阅分离。是否安装/运行未在此页断言；TUN 与 nftables tproxy 只能选定一条主路径。</p>
+      <div class="company-ownership"><span>PBR</span><span>→</span><span>未接管流量</span></div>
+      <p class="company-note">启用前记录 DNS、fwmark、路由表和 chain owner。</p>
+      <div class="company-actions"><a class="company-button company-button-quiet" href="<%=url('admin','services','openclash')%>">打开 OpenClash</a></div>
+    </section>
+  </div>
+
+    <div class="company-section-heading"><div><p class="company-eyebrow">OPERATE SAFELY</p><h2>管理员操作</h2></div><span class="company-note">变更前先备份</span></div>
+    <section class="company-admin-strip">
+    <div class="company-admin-copy"><span class="company-icon company-icon-lock" aria-hidden="true">▣</span><div><strong>配置和日志是现场资产</strong><p>VLAN、WireGuard、WAN、订阅和日志不会写入 git；OTA 前备份并保存离线副本。</p></div></div>
+    <div class="company-actions"><a class="company-button" href="<%=url('admin','system','backup')%>">备份配置</a><a class="company-button company-button-quiet" href="<%=url('admin','system','flash')%>">刷写/OTA</a></div>
+    </section>
+  </main>
+  <footer class="company-footer"><span>CompanyWrt · Xiaomi AX9000</span><span>官方主题保留为救援入口</span></footer>
+</div>
+<script>
+  (function () {
+    var root = document.getElementById('company-dashboard');
+    if (!root) return;
+    root.classList.add('company-ready');
+    root.querySelectorAll('a').forEach(function (link) { link.setAttribute('aria-label', link.textContent.trim()); });
+  }());
+</script>
+<%+footer%>

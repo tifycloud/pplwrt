@@ -1,23 +1,44 @@
-# 双 WAN、PBR 与 nftables
+# 双 WAN、PBR 与只读变更计划
 
-CompanyWrt 把双 WAN 当成策略路由，而不是无条件的 per-packet 负载均衡。`pbr` 写入 fwmark 和独立路由表，`firewall4`/nftables 负责过滤、NAT 和状态；基础镜像不安装 `mwan3`，避免两个故障检测/标记系统争夺连接所有权。
+固定业务角色：
 
-## 推荐流程
+| UCI interface | 线路 | 规划用途 | route metric |
+| --- | --- | --- | --- |
+| `unicom` | 联通 1 Gbit/s | office 默认出口 | 10 |
+| `mobile` | 移动 100 Mbit/s | server/指定 employee/稳定上传 | 20 |
+
+物理 DSA 设备名必须在真机通过 `ip -br link`/LuCI 确认，不能复制示例。生成器严格拒绝
+非法接口、IPv4/CIDR、网关、重复 WAN、域名/端口注入；IPv6 不由此计划重写，现有
+loopback、DSA、默认 WAN/WAN6、firewall defaults 和 fw4 默认规则全部保留。
 
 ```sh
-company-network generate --wan1 eth0.2 --wan2 eth0.3 \
-  --lan-cidr 192.168.50.1/24 --output /tmp/company-network
-less /tmp/company-network/network /tmp/company-network/firewall /tmp/company-network/pbr
-company-network apply --wan1 eth0.2 --wan2 eth0.3 --yes
+company-network plan \
+  --unicom-device wan \
+  --mobile-device lan4 \
+  --office-cidr 192.168.50.0/24 \
+  --server 192.168.50.10 \
+  --employee 192.168.50.20/32 \
+  --mobile-dest uploads.example.com \
+  --mobile-port tcp:443 \
+  --output /tmp/company-network-plan
+less /tmp/company-network-plan/uci.batch /tmp/company-network-plan/REVIEW.md
 ```
 
-先在隔离窗口验证。生成器不接受 PPPoE 密码，不猜接口，不会自动把连接分散到两个链路；`--yes` 才会写 UCI，并在变更前留下可回滚备份。
+输出只使用 `set network.unicom/mobile`、命名 firewall zone/forwarding 和命名 PBR
+policy；没有 package-wide import/delete、commit 或 reload。具体源、目标域名/IPv4/CIDR、
+TCP/UDP 端口可分别选择 mobile/unicom，最后一条 office 默认 policy 指向 unicom。
+域名策略要求 `dnsmasq.nftset`，由预装 `dnsmasq-full`/pbr 支持。
 
-## 策略建模
+## 人工应用门禁
 
-- 连接/源地址：办公 VLAN 固定 WAN1，访客 VLAN 固定 WAN2。
-- 目的地址：企业 SaaS、VPN 对端或特定 CDN 使用明确的目的集合。
-- 端口：只为有清晰需求的 TCP/UDP 端口添加规则；DNS、DHCP、已建立连接先排除。
-- 故障：用链路探测和管理员确认切换，记录切换时间与连接中断范围。
+项目无法对未知 DSA/上游/boot 环境实现可靠自动回滚，因此 **没有 apply 命令**。
+管理员必须在隔离有线 LAN、带 out-of-band/厂商恢复能力的维护窗口：
 
-任何规则都要写出 `fwmark -> table -> interface` 映射。建立 OpenClash 后先选择是否让它接管该流量；若接管，禁用相应 PBR 规则，反之亦然。验证 `nft list ruleset`、`ip rule`、`ip route show table all` 和连接跟踪，确认没有重复 chain/mark。
+1. 导出 network/firewall/pbr，记录 WAN6、nft ruleset、ip rule/table、OpenClash marks；
+2. 逐行审阅 `uci.batch`，确认命名 section 无冲突；
+3. 只 staging：`uci -q batch < uci.batch`，审查 `uci changes`；错误则 `uci revert`；
+4. 人工决定 commit/reload，先确认 HTTPS 管理仍可用；
+5. 分别测试两条 WAN、WAN 入站拒绝、IPv4/IPv6、DNS、源/域名/地址/端口命中、
+   会话保持/故障和 OpenClash 唯一规则所有者。
+
+基础镜像不安装 mwan3。PBR/OpenClash/手工 nft 不得共享 mark/table/chain 所有权。

@@ -1,2 +1,5 @@
-CompanyWrt dashboard is intentionally read-only. Apply network, PBR, VLAN,
-WireGuard and OTA changes through the documented admin-confirmed workflows.
+CompanyWrt dashboard is a read-only UCI/build configuration snapshot, not a
+health or acceptance claim. Network output is plan-only; OTA re-verifies a
+signed bundle and prints rather than executes the final sysupgrade. Run
+enrollment-preflight from an isolated wired LAN and preserve official LuCI
+themes for recovery.

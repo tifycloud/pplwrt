@@ -1,12 +1,25 @@
-# 首次配置清单
+# 首次 enrollment 清单
 
-首次启动请使用有线 LAN，立即修改 root/管理员凭据并保存密码管理器中的随机值；关闭 WAN 管理、确认 HTTPS 证书和 SSH 只允许管理网段。
+第一次启动断开 WAN，只保留一台管理员电脑直连隔离有线 LAN；不要通过 Wi-Fi、远程
+跳板或生产交换网络首登。准备官方恢复/串口、稳定电源和离线证据盘。
 
-按顺序完成：
+1. 设置唯一随机 root 密码，核对 HTTPS 证书指纹；不要上传 `/etc/shadow`。
+2. 运行：
 
-1. `ubus call system board` 确认 board/profile；`cat /etc/companywrt/build.conf` 确认 release。
-2. 在 LuCI 设定时区/NTP、语言 zh_cn、管理 IP 和官方救援主题；保留 CompanyWrt dashboard 作为只读入口。
-3. 逐个确认 WAN 设备名、MTU、DHCP/PPPoE/VLAN，不要把示例 `eth0.2/eth0.3` 直接当成事实。
-4. 先只启用 WAN1；完成 DNS、IPv4/IPv6、内外网访问测试后再接 WAN2。
-5. 按 [dual-wan-pbr.md](dual-wan-pbr.md) 生成配置，审阅后再应用；记录 fwmark/table 与 OpenClash 冲突检查。
-6. 最后做配置/日志备份、恢复演练和升级确认。未完成备份不得开启自动升级。
+   ```sh
+   /usr/share/company/enrollment-preflight \
+     --expected-version 25.12.5-company.2-rc1
+   ```
+
+   所有 FAIL 必须解决；WARN 也写入验收记录。
+3. 人工核对 `ubus call system board` 是 `xiaomi,ax9000`、target 是
+   `qualcommax/ipq807x`，再核对 `/etc/companywrt/build.conf` 和 VERSION。
+4. 保留官方 LuCI 主题；检查 uhttpd redirect/listener、WAN firewall UCI 和实际 nft rules。
+5. 逐个确认 DSA 端口、管理 IP、时区/NTP、监管域。先只启用 unicom，验证 IPv4/IPv6、
+   DNS/NAT；再在维护窗口加入 mobile。
+6. 用 `company-network plan` 生成并逐行审阅 UCI staging plan。不存在 live apply。
+7. 最后配置 VLAN/WireGuard/log collector/monitoring/OpenClash；每项记录 mark/table/DNS/MTU
+   所有权与回滚。mobile SQM 只能经安装模板和性能测试后启用，unicom 默认关闭。
+8. 做离线配置/日志备份和恢复演练。没有 boot slot/救援/断电证据不能进行 OTA。
+
+RC 通过 enrollment 不等于生产批准；stable 还需要 `production-gates` 全部真机证据。

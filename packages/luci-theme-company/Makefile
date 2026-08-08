@@ -1,7 +1,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=luci-theme-company
-PKG_VERSION:=25.12.5-company.1
+PKG_VERSION:=25.12.5-company.2-rc1
 PKG_RELEASE:=1
 PKG_MAINTAINER:=CompanyWrt contributors
 PKG_LICENSE:=MIT

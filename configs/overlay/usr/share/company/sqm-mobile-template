@@ -1,0 +1,10 @@
+# OPTIONAL INSTALL/CONFIG REVIEW TEMPLATE — not executed by first boot.
+#
+# apk update
+# apk add sqm-scripts luci-app-sqm
+#
+# In LuCI, create one disabled queue for logical interface `mobile`. Benchmark
+# the actual 100 Mbit/s link and start below measured sustained rates (for
+# example 90-95%). Enable only after bufferbloat, CPU, latency and failover tests.
+# Keep SQM disabled on `unicom` (1 Gbit/s default) unless a separate hardware
+# test proves throughput and latency targets. Never guess a DSA device name.

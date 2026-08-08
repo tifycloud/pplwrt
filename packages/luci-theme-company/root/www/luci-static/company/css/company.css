@@ -36,6 +36,9 @@
 .company-header-meta { display: flex; align-items: center; gap: .45rem; color: var(--company-ok); font-size: .8rem; white-space: nowrap; }
 .company-header-meta small { display: block; padding: .25rem .45rem; background: var(--company-ok-soft); border-radius: .25rem; font-size: .72rem; }
 .company-live-dot { width: .55rem; height: .55rem; border-radius: 99px; background: var(--company-ok); box-shadow: 0 0 0 .2rem var(--company-ok-soft); }
+.company-header-meta-warn { color: var(--company-warn); }
+.company-header-meta-warn .company-live-dot { background: var(--company-warn); box-shadow: 0 0 0 .2rem var(--company-warn-soft); }
+.company-header-meta-warn small { background: var(--company-warn-soft); }
 
 .company-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .75rem; margin: 1rem 0 1.9rem; }
 .company-kpi { display: flex; min-height: 6.9rem; flex-direction: column; justify-content: space-between; gap: .3rem; padding: .9rem 1rem; background: var(--company-panel); border: 1px solid var(--company-border); border-radius: .5rem; box-shadow: 0 4px 14px rgba(20, 38, 48, .035); }
@@ -62,6 +65,7 @@
 .company-icon-lock { background: #eef3f5; color: var(--company-muted); }
 .company-pill { padding: .27rem .48rem; border-radius: 99px; font-size: .69rem; font-weight: 750; white-space: nowrap; }
 .company-pill-ok { background: var(--company-ok-soft); color: var(--company-ok); }
+.company-pill-neutral { background: var(--company-accent-soft); color: var(--company-accent-strong); }
 .company-pill-warn { background: var(--company-warn-soft); color: var(--company-warn); }
 .company-card-lead { margin: .85rem 0; color: var(--company-muted); font-size: .86rem; line-height: 1.55; }
 .company-note { margin: .75rem 0 0; color: var(--company-subtle); font-size: .76rem; line-height: 1.5; }

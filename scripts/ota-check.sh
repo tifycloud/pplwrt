@@ -1,42 +1,78 @@
 #!/bin/sh
-# Verify a CompanyWrt release manifest without changing router state.
+# Download and cryptographically verify a complete CompanyWrt OTA candidate.
+# This command never calls sysupgrade or changes UCI/device state.
 set -eu
 
-usage() { echo "Usage: ota-check.sh --manifest FILE|URL [--version VERSION] [--profile PROFILE]"; }
+SCRIPT_DIR=$(CDPATH='' cd -- "$(dirname "$0")" && pwd)
+# Installed beside this script in the image.
+# shellcheck disable=SC1091
+. "$SCRIPT_DIR/ota-common.sh"
+
+usage() {
+	cat <<'EOF'
+Usage: ota-check.sh --manifest FILE|HTTPS_URL [options]
+
+Options:
+  --signature FILE|HTTPS_URL   Override manifest SIGNATURE_URL (offline bundle)
+  --image FILE|HTTPS_URL       Override manifest URL (offline bundle)
+  --public-key FILE            Trusted usign public key
+  --download-dir DIR           Preserve verified bundle here
+  --version VERSION            Require exact candidate version
+  --profile PROFILE            Require exact profile (default xiaomi_ax9000)
+  --board BOARD                Require exact board (default xiaomi,ax9000)
+  --channel rc|beta|stable     Require exact release channel
+
+Remote inputs are HTTPS-only. The manifest schema, usign signature/key id,
+actual downloaded image size and 64-hex SHA256 are all mandatory.
+EOF
+}
+
 MANIFEST=""
+SIGNATURE=""
+IMAGE=""
+PUBLIC_KEY="/etc/companywrt/keys/release.pub"
+DOWNLOAD_DIR=""
 EXPECTED_VERSION=""
 EXPECTED_PROFILE="xiaomi_ax9000"
+EXPECTED_BOARD="xiaomi,ax9000"
+EXPECTED_CHANNEL=""
+
 while [ "$#" -gt 0 ]; do
-  case "$1" in
-    --manifest) MANIFEST=${2:-}; shift 2 ;;
-    --version) EXPECTED_VERSION=${2:-}; shift 2 ;;
-    --profile) EXPECTED_PROFILE=${2:-}; shift 2 ;;
-    -h|--help) usage; exit 0 ;;
-    *) usage >&2; exit 2 ;;
-  esac
+	case "$1" in
+		--manifest) [ "$#" -ge 2 ] || ota_die "missing value for $1"; MANIFEST=$2; shift 2 ;;
+		--signature) [ "$#" -ge 2 ] || ota_die "missing value for $1"; SIGNATURE=$2; shift 2 ;;
+		--image) [ "$#" -ge 2 ] || ota_die "missing value for $1"; IMAGE=$2; shift 2 ;;
+		--public-key) [ "$#" -ge 2 ] || ota_die "missing value for $1"; PUBLIC_KEY=$2; shift 2 ;;
+		--download-dir) [ "$#" -ge 2 ] || ota_die "missing value for $1"; DOWNLOAD_DIR=$2; shift 2 ;;
+		--version) [ "$#" -ge 2 ] || ota_die "missing value for $1"; EXPECTED_VERSION=$2; shift 2 ;;
+		--profile) [ "$#" -ge 2 ] || ota_die "missing value for $1"; EXPECTED_PROFILE=$2; shift 2 ;;
+		--board) [ "$#" -ge 2 ] || ota_die "missing value for $1"; EXPECTED_BOARD=$2; shift 2 ;;
+		--channel) [ "$#" -ge 2 ] || ota_die "missing value for $1"; EXPECTED_CHANNEL=$2; shift 2 ;;
+		-h|--help) usage; exit 0 ;;
+		*) usage >&2; ota_die "unknown argument: $1" ;;
+	esac
 done
+
 [ -n "$MANIFEST" ] || { usage >&2; exit 2; }
-
-TMP=""
-cleanup() { [ -z "$TMP" ] || rm -f "$TMP"; }
-trap cleanup EXIT INT TERM
-case "$MANIFEST" in
-  http://*|https://*)
-    command -v curl >/dev/null 2>&1 || { echo "curl is required" >&2; exit 1; }
-    TMP=$(mktemp /tmp/companywrt-manifest.XXXXXX)
-    curl -fsSL --retry 2 "$MANIFEST" -o "$TMP"
-    MANIFEST="$TMP"
-    ;;
-esac
-[ -s "$MANIFEST" ] || { echo "manifest is empty: $MANIFEST" >&2; exit 1; }
-
-VERSION=$(awk -F= '$1=="VERSION" {print $2; exit}' "$MANIFEST")
-PROFILE=$(awk -F= '$1=="PROFILE" {print $2; exit}' "$MANIFEST")
-IMAGE=$(awk -F= '$1=="IMAGE" {print $2; exit}' "$MANIFEST")
-SHA256=$(awk -F= '$1=="SHA256" {print $2; exit}' "$MANIFEST")
-if [ -z "$VERSION" ] || [ -z "$PROFILE" ] || [ -z "$IMAGE" ] || [ -z "$SHA256" ]; then
-  echo "manifest must define VERSION, PROFILE, IMAGE and SHA256" >&2; exit 1;
+case "$DOWNLOAD_DIR" in *"'"*|*[![:print:]]*) ota_die "download directory contains unsafe characters" ;; esac
+if [ -z "$DOWNLOAD_DIR" ]; then
+	DOWNLOAD_DIR=$(mktemp -d "${TMPDIR:-/tmp}/companywrt-ota-check.XXXXXX")
+else
+	[ ! -e "$DOWNLOAD_DIR" ] && [ ! -L "$DOWNLOAD_DIR" ] || ota_die "download directory must not already exist"
+	mkdir -m 0700 -- "$DOWNLOAD_DIR" || ota_die "cannot create download directory: $DOWNLOAD_DIR"
 fi
-[ -z "$EXPECTED_VERSION" ] || [ "$EXPECTED_VERSION" = "$VERSION" ] || { echo "version mismatch: $VERSION" >&2; exit 1; }
-[ "$EXPECTED_PROFILE" = "$PROFILE" ] || { echo "profile mismatch: $PROFILE" >&2; exit 1; }
-printf 'OTA candidate verified: VERSION=%s PROFILE=%s IMAGE=%s SHA256=%s\n' "$VERSION" "$PROFILE" "$IMAGE" "$SHA256"
+
+ota_stage_and_verify "$MANIFEST" "$SIGNATURE" "$IMAGE" "$PUBLIC_KEY" "$DOWNLOAD_DIR"
+[ -z "$EXPECTED_VERSION" ] || [ "$OTA_VERSION" = "$EXPECTED_VERSION" ] || ota_die "version mismatch: expected $EXPECTED_VERSION, got $OTA_VERSION"
+[ "$OTA_PROFILE" = "$EXPECTED_PROFILE" ] || ota_die "profile mismatch: expected $EXPECTED_PROFILE, got $OTA_PROFILE"
+[ "$OTA_BOARD" = "$EXPECTED_BOARD" ] || ota_die "board mismatch: expected $EXPECTED_BOARD, got $OTA_BOARD"
+[ -z "$EXPECTED_CHANNEL" ] || [ "$OTA_CHANNEL" = "$EXPECTED_CHANNEL" ] || ota_die "channel mismatch: expected $EXPECTED_CHANNEL, got $OTA_CHANNEL"
+
+printf 'VERIFIED_VERSION=%s\n' "$OTA_VERSION"
+printf 'VERIFIED_PROFILE=%s\n' "$OTA_PROFILE"
+printf 'VERIFIED_BOARD=%s\n' "$OTA_BOARD"
+printf 'VERIFIED_CHANNEL=%s\n' "$OTA_CHANNEL"
+printf 'VERIFIED_IMAGE=%s\n' "$OTA_STAGED_IMAGE"
+printf 'VERIFIED_SHA256=%s\n' "$OTA_SHA256"
+printf 'VERIFIED_SIZE=%s\n' "$OTA_SIZE"
+printf 'No router state was changed. Run ota-apply separately on the target router; it re-verifies everything.\n'

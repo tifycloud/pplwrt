@@ -1,0 +1,45 @@
+CompanyWrt notices and upstream license sources
+================================================
+
+CompanyWrt-authored files in this repository, including the LuCI dashboard
+overlay, theme assets, build/verification scripts and configuration templates,
+are distributed under the repository MIT License unless a file says otherwise.
+
+The firmware is assembled from official OpenWrt 25.12.5 binary packages. Those
+packages are separate upstream works and retain their own copyright/license
+terms. The generated package manifest and CycloneDX SBOM are the authoritative
+per-build inventory; APK metadata inside the image records package licenses.
+Key upstream source/license locations are:
+
+* OpenWrt build system/base — GPL-2.0-only; additional package licenses apply:
+  https://github.com/openwrt/openwrt/blob/openwrt-25.12/COPYING
+  https://github.com/openwrt/openwrt/tree/openwrt-25.12/LICENSES
+* Official target binaries, package repositories, profiles and source archives:
+  https://downloads.openwrt.org/releases/25.12.5/
+* LuCI and luci-proto-wireguard — Apache-2.0:
+  https://github.com/openwrt/luci/blob/openwrt-25.12/LICENSE
+* pbr — AGPL-3.0-or-later (package metadata and source):
+  https://github.com/openwrt/packages/blob/openwrt-25.12/net/pbr/Makefile
+  https://github.com/mossdef-org/pbr/
+* WireGuard tools — GPL-2.0:
+  https://github.com/openwrt/openwrt/blob/openwrt-25.12/package/network/utils/wireguard-tools/Makefile
+  https://git.zx2c4.com/wireguard-tools/
+* collectd — MIT and GPL-2.0-or-later components:
+  https://github.com/openwrt/packages/blob/openwrt-25.12/utils/collectd/Makefile
+  https://github.com/collectd/collectd/
+* sqm-scripts (optional, not preinstalled) — GPL-2.0-only:
+  https://github.com/openwrt/packages/blob/openwrt-25.12/net/sqm-scripts/Makefile
+  https://github.com/tohojo/sqm-scripts
+* usign — ISC:
+  https://git.openwrt.org/project/usign.git
+
+OpenClash itself, its mihomo core, subscriptions and rule data are not included.
+Only dependencies available from the official OpenWrt feeds are selected; see
+docs/openclash.md for upstream links and the runtime installation boundary.
+
+The package Makefiles under packages/ describe future SDK packages, but the
+current ImageBuilder pipeline does not compile or install them as APKs. Their
+`root/` trees are copied explicitly as named `*-overlay` components, are loaded
+by LuCI at runtime, and are represented in CUSTOM-COMPONENTS.manifest, the
+release manifest, NOTICE and augmented CycloneDX SBOM. This naming avoids a
+false claim that locally built APKs were produced.

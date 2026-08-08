@@ -14,9 +14,11 @@
 | 官方/USTC/TUNA 源 | [feeds.md](feeds.md) |
 | CompanyWrt UI | [ui.md](ui.md) |
 | OTA、人工确认和发布 | [ota.md](ota.md) |
-| 测试矩阵 | [test-matrix.md](test-matrix.md) |
+| RC/生产真机门禁 | [test-matrix.md](test-matrix.md) |
 | 贡献流程 | [contributing.md](contributing.md) |
 | 变更记录 | [CHANGELOG.md](CHANGELOG.md) |
 | 官方一手来源与校验证据 | [sources.md](sources.md) |
 
-任何会改变设备状态的命令都标明 `管理员确认`。文档中的接口名、VLAN ID、地址、密钥和订阅均为示例，不能直接复制到生产网络。
+当前版本是 RC/NOT PRODUCTION。任何会改变设备状态的命令都标明 `管理员确认`；接口名、
+VLAN ID、地址、密钥和订阅都是示例，不能直接复制到生产网络。当前从 kwrt 迁移的设备
+应先读 flash.md 并采集 board/MTD/boot slot/secure boot/救援证据。

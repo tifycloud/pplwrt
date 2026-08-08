@@ -1,5 +1,20 @@
-# 贡献指南
+# 贡献与发布规则
 
-提交前运行 `./scripts/verify-shell.sh`、`tests/ax9000/test-profile.sh` 和 `tests/ax9000/test-network-generator.sh`。改动网络、PBR、无线、OTA 或安全边界时，更新架构/安全/测试矩阵和 CHANGELOG；添加新包时说明官方 feed、版本、许可证、大小、依赖和回滚。
+提交前运行：
 
-提交信息建议使用 `area: change`，PR 必须包含构建 release、manifest/SHA、目标 profile、实机/容器测试环境和未完成项。严禁提交密钥、订阅、生产日志、配置备份、完整 ImageBuilder tarball 或未经授权的 GitHub remote。维护者在合并前独立复核构建与安全敏感改动。
+```sh
+./scripts/verify-shell.sh
+for t in tests/ax9000/test-*.sh; do "$t"; done
+actionlint .github/workflows/*.yml
+```
+
+网络、OTA、安全、包、UI 或构建改动必须同步更新测试、架构/安全/操作文档和 CHANGELOG。
+新增 upstream package 要记录 official feed、版本、许可证、依赖/体积和启用/回滚边界，
+并进入 package manifest/SBOM/NOTICE 内容检查。
+
+禁止提交私钥、密码、token、订阅、生产配置/日志、serial/MAC、公网 IP、完整 ImageBuilder
+archive 或未脱敏真机 evidence。公钥允许提交；私钥 secret 名固定但值永不输出。
+
+tag 必须为 `v$(cat VERSION)`。RC/beta 只能 prerelease；stable 必须有对应
+`production-gates/<VERSION>.env` 真机记录，模板不算证据。author 不得把 CI/build success
+描述为硬件验收；发布后还要验证 release assets、usign、SHA、attestation 和 OTA 下载链。

@@ -16,5 +16,11 @@ artifacts/**/sha256sums
 artifacts/**/SHA256SUMS
 artifacts/**/VERSION
 artifacts/**/*.bom.cdx.json
+artifacts/**
 *.swp
 .DS_Store
+*.key
+*.sec
+*.secret
+keys/*private*
+keys/*secret*

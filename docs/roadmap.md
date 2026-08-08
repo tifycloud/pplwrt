@@ -1,19 +1,22 @@
 # Roadmap
 
-## 已完成（25.12.5-company.1）
+## 当前：25.12.5-company.2-rc1（仅 RC）
 
-- 官方 ImageBuilder/profile/镜像校验元数据固定。
-- apk 基线、LuCI+luci-ssl+中文、官方救援主题、PBR/nftables 基础包。
-- CompanyWrt UI MVP、双 WAN 配置生成器、管理员确认 OTA 包装器。
-- CI 的稳定构建、manifest、SHA256 和 release artifact 流程骨架。
+- 固定 official ImageBuilder/profile/SHA；版本化输出与 squashfs 内容检查。
+- plan-only 双 WAN/PBR；严格 signed OTA；安全首启/preflight；动态只读 UI。
+- WireGuard/logd/collectd 基础、mobile SQM 可选模板、overlay SBOM/NOTICE。
+- 最小权限 release pipeline、Sigstore attestation、RC prerelease/stable production gate。
 
-## 下一阶段
+## 进入 stable 前（全部需要真实 AX9000）
 
-- 在真实 AX9000 上完成 factory/initramfs/sysupgrade 救援演练、双 WAN 故障注入和 HE160/BDF 矩阵。
-- 将 CompanyWrt 两个 LuCI 包接入内部 APK/IPK feed，保留 overlay 构建作为故障回退。
-- 加入签名 manifest（离线密钥在组织密钥库，永不入仓库）和回滚版本策略。
-- 监控/日志集中化、SQM 参数模板和 VLAN/WireGuard 设备实测。
+- 确认中国/国际硬件变体、secure boot、MTD、boot slot 与官方恢复路径。
+- factory/initramfs/sysupgrade、断电、救援、配置恢复演练。
+- HE80/监管域/BDF、双 WAN/IPv6/VLAN/WireGuard/PBR/OpenClash/SQM/OTA 完整矩阵。
+- 生成脱敏 evidence bundle hashes 和命名人工审批；通过 production-gates schema。
 
-## Buildroot 入口条件
+## 后续工程
 
-只有 DTS、分区、内核、BDF 或启动链需要修改时才创建 Buildroot 分支；先记录上游 commit、工具链、分区表、救援手册和可回滚镜像，再让 CI 同时产出官方和定制路径。
+- 用同版本 official OpenWrt SDK 单独构建/签署两个 CompanyWrt APK，并由 ImageBuilder 安装；
+  完成前继续诚实使用 overlay 名称，不为包构建切换完整 Buildroot。
+- 设计 staged key rotation、回滚版本策略、集中日志 TLS/collector 与监控告警。
+- 只有 DTS/分区/kernel/BDF/启动链确需修改时建立独立 Buildroot 分支和救援门禁。

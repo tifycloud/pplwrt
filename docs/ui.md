@@ -1,5 +1,16 @@
 # CompanyWrt UI
 
-`luci-theme-company` 提供可访问 CSS，`luci-app-company` 提供可运行的只读 dashboard：显示设备/release/HE80、WAN/PBR/OpenClash 边界，并链接到官方 LuCI 接口、防火墙、PBR、备份和刷写页。它不修改全局 LuCI 模板，官方 openwrt/openwrt-2020 主题始终作为救援主题。
+`luci-app-company-overlay` 提供只读 dashboard，`luci-theme-company-overlay` 提供局部、
+响应式、深色/减少动画/键盘可访问 CSS。它们由 ImageBuilder FILES overlay 安装，
+当前不是 APK；实际路径与内容由固件解包测试核验。
 
-UI 不显示密码、订阅、日志正文或私钥，也不提供一键 OTA/一键网络覆盖按钮。现场操作必须回到 CLI/官方 LuCI 变更流程、备份和管理员确认；这使 dashboard 损坏时不会阻止救援。
+页面读取 `/etc/companywrt/VERSION`、build.conf、company/pbr/firewall/uhttpd UCI：
+
+- PBR 只显示“配置已启用”或“未启用/未安装”，并明确运行/命中未验证；
+- WAN firewall、NAT、HTTPS 都标为 **UCI 配置快照**，不推断实际 nft/cert 健康；
+- 无线显示配置值，但监管域/BDF/HE80/HE160 表现仍待真机；
+- 顶部始终显示候选配置/未验收，不再静态声称“设备健康/PBR 已就绪/基线通过”。
+
+UI 不显示凭据、订阅、私钥或日志正文，也没有一键网络 apply/OTA。管理员从官方 LuCI
+页面或审阅后的 CLI 流程操作。全局主题保持官方 openwrt2020；自定义 CSS/页面损坏时
+仍可使用官方救援入口。

@@ -1,4 +1,4 @@
-name: CompanyWrt checks
+name: CompanyWrt CI
 
 on:
   pull_request:
@@ -10,10 +10,16 @@ permissions:
 
 jobs:
   checks:
+    name: checks
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - name: Shell and metadata checks
+      - name: Checkout without persisted credentials
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Install static check dependencies
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends jq shellcheck
+      - name: Shell, policy and metadata checks
         run: |
           set -eu
           ./scripts/verify-shell.sh
@@ -21,4 +27,9 @@ jobs:
           tests/ax9000/test-network-generator.sh
           tests/ax9000/test-ota.sh
           tests/ax9000/test-ui.sh
-          test "$(cat VERSION)" = '25.12.5-company.1'
+          tests/ax9000/test-build-layout.sh
+          tests/ax9000/test-content-source.sh
+          tests/ax9000/test-enrollment-preflight.sh
+          tests/ax9000/test-production-gate.sh
+          tests/ax9000/test-workflows.sh
+          test "$(cat VERSION)" = '25.12.5-company.2-rc1'

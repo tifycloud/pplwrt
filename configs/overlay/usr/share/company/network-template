@@ -1,7 +1,8 @@
-# Generate a reviewable enterprise network configuration:
-#   company-network generate --wan1 eth0.2 --wan2 eth0.3 --output /tmp/cw
-# Apply only after review and backup:
-#   company-network apply --wan1 eth0.2 --wan2 eth0.3 --yes
+# Generate a review-only enterprise network plan (physical DSA names are examples):
+#   company-network plan --unicom-device wan --mobile-device lan4 \
+#     --office-cidr 192.168.50.0/24 --output /tmp/company-network-plan
 #
-# PBR is policy based, not automatic load balancing. Add source/destination/
-# port rules deliberately and reserve fwmark/table IDs away from OpenClash.
+# Read uci.batch and REVIEW.md from an isolated wired LAN. There is deliberately
+# no live apply/rollback command: stage with uci batch only during a human-
+# approved maintenance window, inspect `uci changes`, then decide commit/reload.
+# Existing loopback/DSA/default WAN/WAN6/firewall rules are not imported/deleted.

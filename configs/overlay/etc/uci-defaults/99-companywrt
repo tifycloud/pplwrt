@@ -1,9 +1,31 @@
 #!/bin/sh
 
-# Safe first-boot defaults; do not guess WAN devices or credentials.
+# Safe first-boot defaults. Do not guess WAN/DSA devices, firewall zones,
+# credentials, VLANs or uplink secrets. The official LuCI theme remains the
+# global recovery theme; the CompanyWrt page loads its CSS locally.
 uci -q set system.@system[0].hostname='companywrt-ax9000'
 uci -q set luci.main.lang='zh_cn'
 uci -q set luci.main.mediaurlbase='/luci-static/openwrt2020'
+uci -q set uhttpd.main.redirect_https='1'
+
+channel=$(awk -F= '$1 == "CHANNEL" { print $2; exit }' /etc/companywrt/build.conf 2>/dev/null)
+case "$channel" in
+	rc|beta|stable) uci -q set "company.main.channel=$channel" ;;
+esac
+
+# collectd packages provide the approved monitoring foundation, but the
+# upstream package enables its init link during image assembly. Keep it
+# dormant until an authenticated management-VLAN/WireGuard sink is approved.
+if [ -x /etc/init.d/collectd ]; then
+	/etc/init.d/collectd disable
+fi
+
 uci -q commit system
 uci -q commit luci
+uci -q commit uhttpd
+uci -q commit company
+
+# Deliberately do not set a root password and do not touch firewall/network.
+# Official defaults must keep WAN input rejected; enrollment-preflight verifies
+# that invariant before the router is accepted into service.
 exit 0

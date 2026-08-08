@@ -1,6 +1,6 @@
 config company 'main'
 	option enabled '1'
-	option channel 'stable'
-	option image_url 'https://github.com/companywrt/pplwrt/releases/latest/download/'
+	option channel 'rc'
+	option image_url 'https://github.com/tifycloud/pplwrt/releases/'
 	option ota_require_confirmation '1'
 	option wifi_mode 'HE80'

@@ -1,0 +1,4 @@
+# Optional mobile-uplink SQM set. Not part of the base image because it pulls
+# legacy iptables compatibility dependencies in OpenWrt 25.12.5.
+sqm-scripts
+luci-app-sqm

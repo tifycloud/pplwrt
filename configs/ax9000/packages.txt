@@ -3,10 +3,13 @@ luci-base
 luci-mod-admin-full
 luci-ssl-openssl
 luci-i18n-base-zh-cn
+luci-i18n-pbr-zh-cn
 luci-theme-openwrt
 luci-theme-openwrt-2020
 uhttpd-mod-ubus
 rpcd-mod-rrdns
+usign
+jsonfilter
 pbr
 luci-app-pbr
 kmod-nft-tproxy
@@ -22,3 +25,17 @@ ip-full
 ruby
 ruby-yaml
 unzip
+# Enterprise VPN foundation. Keys and peers remain device-local.
+kmod-wireguard
+wireguard-tools
+luci-proto-wireguard
+# logd is the small built-in remote-syslog path; forwarding remains disabled.
+logd
+# Minimal monitoring base; no local RRD history or collector endpoint is set.
+collectd
+collectd-mod-cpu
+collectd-mod-interface
+collectd-mod-load
+collectd-mod-memory
+collectd-mod-network
+collectd-mod-uptime

@@ -1,3 +1,8 @@
-`packages.txt` is intentionally a reviewable list. `mwan3` is absent by
-design: choose policies with firewall4/nftables + pbr. If your release's feeds
-rename a package, CI fails rather than silently selecting a different package.
+`packages.txt` is the auditable base package selection. It explicitly includes
+usign, WireGuard, logd and a minimal collectd foundation. `mwan3` is absent by
+design; policy ownership stays with firewall4/nftables + pbr.
+
+SQM is intentionally separate in `packages-sqm-optional.txt` because OpenWrt
+25.12.5 pulls iptables compatibility dependencies. The review template applies
+only to measured `mobile`; `unicom` stays disabled by default. A feed rename or
+missing package fails the build instead of silently substituting a package.

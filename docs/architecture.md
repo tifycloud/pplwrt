@@ -1,20 +1,18 @@
-# 架构与长期边界
+# 架构与可信边界
 
-CompanyWrt 分为四层：
+1. **官方固件层**：OpenWrt 25.12.5、`qualcommax/ipq807x`、`xiaomi_ax9000`、标准分区、
+   firewall4/nftables、LuCI SSL、中文与两个官方救援主题。
+2. **策略计划层**：命名 `unicom`/`mobile` interface、独立 REJECT uplink zones 和 pbr
+   policies；生成器只输出 incremental staging plan，绝不整包 import/live apply。
+3. **企业基础能力**：WireGuard、logd、轻量 collectd 预装但无机密/collector；SQM mobile
+   可选；OpenClash 仅依赖。PBR/OpenClash/手工 nft 必须单一 mark/table/chain owner。
+4. **overlay 管理层**：CompanyWrt LuCI、脚本、模板、首启 redirect。当前通过 FILES
+   overlay 安装并在 manifest/SBOM/NOTICE 标为 `overlay-not-apk`；Makefile 不等于 APK。
+5. **发布信任层**：固定 ImageBuilder、解包内容检查、严格 usign manifest、SIZE/SHA、
+   GitHub attestation、最小权限 job、RC prerelease 与 stable 真机证据门禁。
 
-1. **官方固件层**：OpenWrt 25.12.5 stable、`qualcommax/ipq807x`、官方 `xiaomi_ax9000` profile、标准分区、`firewall4`/nftables、LuCI+luci-ssl+简体中文+官方救援主题。
-2. **策略层**：`pbr` 生成 fwmark、路由表和 nftables 规则；双 WAN 按连接/源/目的/端口选择，不在基础版引入 `mwan3`。
-3. **可选服务层**：VLAN、WireGuard、SQM、监控、OpenClash。每个服务都有明确的 mark、DNS、MTU 和回滚记录；未启用时不写入镜像。
-4. **运维层**：CompanyWrt LuCI dashboard、备份、OTA 检查、manifest/SHA256 和 CI release。订阅、私钥、日志备份不入 git。
+ImageBuilder 只重组官方 binary packages。需要 DTS/分区/kernel/BDF 修改时必须先提交
+救援/回滚设计，再进入独立 Buildroot；不能用 overlay 伪装硬件支持。
 
-### 为什么先 ImageBuilder
-
-ImageBuilder 只重组官方 target 包，构建快、差异小、可复现。若未来需要修改 DTS、分区、内核选项或 BDF 固件，先提交设计与救援测试，再切换到固定 OpenWrt 源码/Buildroot 构建；不得用 ImageBuilder 伪装硬件修改。
-
-### 数据流和冲突约束
-
-LAN 流量先经过 fw4 基础防火墙，然后由 PBR 根据源/目的/端口设置 mark 和路由表；连接跟踪保证同一连接不漂移。OpenClash 如果接管流量，必须选择 TUN 或 nftables tproxy 的单一路径，并明确 DNS/mark 所有者。不得让 OpenClash、PBR 和手工 nft 同时写同一个 mark/table/chain。
-
-### AX9000 无线
-
-官方 profile 包含 AX9000 专用 ipq-wifi、ath11k/ath10k 固件。默认 HE80。HE160 受监管域、客户端、驱动和 BDF 影响，采用独立 overlay 与测试记录，不把 workaround 混入稳定基础配置。
+dashboard 和 CI 只能证明配置/构建事实，不能证明真实 WAN、射频、secure boot 或救援。
+因此 company.2-rc1 明确 RC-only，stable 由生产 evidence 文件阻断。

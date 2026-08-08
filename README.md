@@ -1,29 +1,45 @@
-# CompanyWrt（小米 AX9000 企业边界模板）
+# CompanyWrt（小米 AX9000 企业边界候选固件）
 
-CompanyWrt 是面向小米 AX9000 的长期维护型 OpenWrt ImageBuilder 项目。当前基线固定为官方 OpenWrt **25.12.5 stable**、`qualcommax/ipq807x`、标准分区和官方 `xiaomi_ax9000` profile。项目以可重复的 ImageBuilder 构建为主；只有需要修改 DTS、分区或 BDF 时，才转入 Buildroot/源码构建。
+CompanyWrt 是基于官方 OpenWrt **25.12.5**、`qualcommax/ipq807x`、标准
+`xiaomi_ax9000` profile 的可审计 ImageBuilder 工程。当前版本是
+**25.12.5-company.2-rc1**：它是 release candidate，**不是生产稳定版**。
+在真实 AX9000 完成刷写/救援/断电/双 WAN/无线/安全门禁前只能用于实验室。
 
-> 这是可审计的固件工程模板，不是对任何型号、无线区域或运营商配置的保证。第一次刷写、切换分区和 OTA 必须由管理员在串口/救援路径可用的情况下执行，并先做配置与日志备份。
+> 固件文件名相似不等于设备兼容。错误变体、secure boot 状态、分区或启动槽
+> 可能导致变砖。当前从 kwrt 迁移的设备必须先按 [刷机与救援](docs/flash.md)
+> 收集 board、MTD、boot slot 和恢复证据，不能直接运行 sysupgrade。
 
-## 快速开始
+## 构建与信任链
+
+发布构建固定官方 ImageBuilder URL/SHA，使用仓库外的 `usign` 私钥签署严格
+`RELEASE-MANIFEST`；固件内只嵌入 [公开验证密钥](keys/companywrt-release.pub)。
+私钥不得进入 git、overlay、日志或 artifact。
 
 ```sh
-git clone <your-companywrt-remote> pplwrt
-cd pplwrt
-./scripts/build-imagebuilder.sh --profile xiaomi_ax9000 --channel stable
-(cd artifacts/stable && sha256sum -c SHA256SUMS)
+export USIGN_SECRET_KEY_FILE=/secure/outside/repository/companywrt-usign.key
+./scripts/build-in-container.sh --profile xiaomi_ax9000 --channel rc
+cd artifacts/rc/25.12.5-company.2-rc1
+sha256sum -c SHA256SUMS
 ```
 
-构建脚本会核对官方 ImageBuilder tarball 的 SHA256、核对 `profiles.json` 中的实际 profile，然后以 `make image PROFILE=xiaomi_ax9000` 构建。脚本默认使用官方 feeds，不下载 OpenClash 核心或订阅，也不会把 `mwan3` 放入基础镜像。
-
-输出位于 `artifacts/stable/`：固件、`manifest`、`VERSION`、`SHA256SUMS` 和构建元数据。`artifacts/` 中的二进制默认被 git 忽略；发布时由 CI 上传 release artifacts。
+输出按 `artifacts/<channel>/<VERSION>/` 版本化，包含固件、严格 manifest、
+`RELEASE-MANIFEST.sig`、包清单、增强 CycloneDX SBOM、NOTICE、MIT LICENSE、
+内容核查报告和 SHA256SUMS。CI 的只读 build job、attestation job 与 contents-write 发布 job
+分离；RC tag 自动发布 prerelease。正式 stable 没有真机证据文件就会失败。
 
 ## 默认边界
 
-- 双 WAN 使用 `firewall4`/nftables、`pbr` 和显式 fwmark/ip rule 策略；基础版不安装 `mwan3`。
-- LuCI、`luci-ssl`、简体中文、官方救援主题和 CompanyWrt 的可运行管理页预装。
-- OpenClash 仅预装官方依赖，插件本体、mihomo 核心和订阅分离；其规则链、fwmark 与 PBR 必须按文档选择唯一所有者。
-- Wi-Fi 默认 HE80。HE160 只在兼容的监管域、客户端和 BDF 经过实测后单独启用；BDF workaround 独立于基础配置。
-- VLAN、WireGuard、WAN、日志/配置备份、SQM、监控和机密信息均不写入 git；使用本地 overlay 或加密的管理员存储。
-- 官方、USTC、TUNA feeds 可按顺序恢复切换，但发布构建必须锁定 URL、版本和校验。
+- 网络脚本只有 **plan** 模式，不会 `uci import`、commit、reload 或 live apply。
+  角色固定为 `unicom`（1G、office 默认）和 `mobile`（100M、稳定上传）。
+- LuCI dashboard 只显示 UCI/构建配置快照；“已启用”不等于运行健康或真机验收。
+- 首启启用 HTTP→HTTPS redirect，不设置默认密码、不猜 DSA/WAN、不放宽 WAN 入站。
+  首次登录只允许隔离有线 LAN，并运行 `enrollment-preflight`。
+- WireGuard、logd 远程日志能力和轻量 collectd 监控基础预装；密钥、collector、
+  VLAN 和租户配置不入镜像。SQM 不预装，移动链路有审阅模板，联通默认禁用。
+- OpenClash 本体、mihomo 核心、订阅与规则不打包，只预装官方 feed 可解析依赖。
+- 自定义 LuCI/脚本当前以 ImageBuilder `FILES` overlay 安装，明确命名为
+  `*-overlay`；仓库中的 Makefile 不是已构建 APK 的声明。
+- 官方 LuCI 主题始终保留为救援入口；Wi-Fi 配置值为 HE80，HE160 只做专项实测。
 
-详细操作按 [docs/README.md](docs/README.md) 导航。请先读 [docs/flash.md](docs/flash.md)、[docs/security.md](docs/security.md) 和 [docs/ota.md](docs/ota.md)。
+从 [文档导航](docs/README.md) 开始，刷写前必读 [安全基线](docs/security.md)、
+[OTA](docs/ota.md) 和 [生产测试矩阵](docs/test-matrix.md)。
