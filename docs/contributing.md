@@ -22,3 +22,4 @@ non-fast-forward，但不得禁止新 RC 创建。RC/beta 只能 prerelease；st
 `production-gates/<VERSION>.env` 真机记录，模板不算证据。author 不得把 CI/build success
 描述为硬件验收；发布前走 `firmware-signing` environment，发布后还要验证 GitHub
 immutable 状态、每个 release asset digest、usign 双签/主签、attestation 和 OTA 下载链。
+完整 Buildroot job 禁止读取发布 secret；签名 job 禁止调用 Buildroot、make 或下载步骤。

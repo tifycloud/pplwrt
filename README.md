@@ -22,9 +22,11 @@ RC2 是显式 usign 轮换过渡：旧 RC1 key 对主 manifest 签名，保证 R
 受审批和冷却保护的 `firmware-signing` environment secret；详见 [密钥说明](keys/README.md)。
 
 ```sh
+./scripts/build-in-container.sh --profile xiaomi_ax9000_darkyun --channel rc --compile-only
 export USIGN_SECRET_KEY_FILE=/secure/outside/repository/companywrt-usign-previous.key
 export USIGN_CURRENT_SECRET_KEY_FILE=/secure/outside/repository/companywrt-usign-current.key
-./scripts/build-in-container.sh --profile xiaomi_ax9000_darkyun --channel rc
+./scripts/sign-release-bundle.sh \
+  --input artifacts/preflight/25.12.5-company.2-rc2 --channel rc
 cd artifacts/rc/25.12.5-company.2-rc2
 sha256sum -c SHA256SUMS
 ```
@@ -32,8 +34,9 @@ sha256sum -c SHA256SUMS
 输出按 `artifacts/<channel>/<VERSION>/` 版本化，包含固件、严格 manifest、
 `RELEASE-MANIFEST.sig`、包清单、增强 CycloneDX SBOM、NOTICE、MIT LICENSE、
 内容核查报告和 SHA256SUMS。CI 先证明 annotated tag 的 peeled commit 与受保护
-`origin/main` HEAD 精确相等，再进入 `firmware-signing`；只读 build、attestation 与唯一
-contents-write publish job 分离。RC tag 自动发布 immutable prerelease。正式 stable 没有
+`origin/main` HEAD 精确相等；完整 Buildroot 在无 secret job 中完成并封存 checksum，
+`firmware-signing` job 只验包和签名、不运行编译器或网络下载。attestation 与唯一
+contents-write publish job 继续分离。RC tag 自动发布 immutable prerelease。正式 stable 没有
 精确真机 evidence 文件就会失败，RC2 没有真机证据，不能当 stable。
 
 ## 默认边界

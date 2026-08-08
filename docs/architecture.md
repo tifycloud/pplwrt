@@ -11,7 +11,8 @@
    overlay 安装并在 manifest/SBOM/NOTICE 标为 `overlay-not-apk`；Makefile 不等于 APK。
 5. **发布信任层**：固定 Buildroot commit/feed/patch、FIT DTB 与 squashfs 内容检查、
    严格 usign manifest、SIZE/SHA、
-   annotated tag=protected main、`firmware-signing` environment、tag ruleset、GitHub
+   annotated tag=protected main、无密钥 Buildroot job、只验包/签名的 `firmware-signing`
+   environment、tag ruleset、GitHub
    immutable release/attestation、最小权限 job、RC prerelease 与 stable 真机证据门禁。
 
 完整 Buildroot 编译内核、DTB 和包；发布 inspector 必须证明 DTB 没有 `ubi_kernel`，

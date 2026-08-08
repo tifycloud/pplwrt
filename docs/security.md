@@ -39,7 +39,9 @@ OTA 要求 HTTPS、严格 schema、usign、实际 SIZE/SHA、board/profile/chann
 `sysupgrade -T` 和双确认。设备端 `ota-apply` 的生产公钥固定为
 `/etc/companywrt/keys/release.pub`，禁止操作员用 `--public-key` 改写信任锚；test override
 受显式 CLI、环境开关和临时 device root 三重约束。GitHub provenance 是加法防线。
-签名 job 只在 annotated tag 精确等于 protected main 且 `firmware-signing` 审批/冷却通过后
-取 key；release 必须由 GitHub 报告 immutable 并通过发布后 digest/attestation 回验。
+完整 Buildroot job 没有任何发布私钥；其 unsigned bundle 先以 SHA256SUMS 封存。签名 job
+只在 annotated tag 精确等于 protected main 且 `firmware-signing` 审批/冷却通过后取 key，
+重新验包后只生成 manifest/签名，不运行编译器或网络下载；release 必须由 GitHub 报告
+immutable 并通过发布后 digest/attestation 回验。
 第三方 APK、OpenClash core、
 订阅和规则必须独立核对来源、ABI、签名、许可证和回滚；不得关闭 APK 签名检查。

@@ -7,7 +7,8 @@ trap 'rm -rf "$TMP"' EXIT INT TERM
 
 mkdir -p "$TMP/device/proc" "$TMP/device/dev" "$TMP/device/sbin" "$TMP/device/lib/upgrade" \
 	"$TMP/device/sys/class/ubi/ubi0" \
-	"$TMP/device/sys/class/ubi/ubi0_0" "$TMP/device/sys/class/ubi/ubi0_1" "$TMP/device/sys/class/ubi/ubi0_2"
+	"$TMP/device/sys/class/ubi/ubi0_0" "$TMP/device/sys/class/ubi/ubi0_1" "$TMP/device/sys/class/ubi/ubi0_2" \
+	"$TMP/device/sys/class/mtd/mtd21" "$TMP/device/sys/class/mtd/mtd22"
 cat > "$TMP/device/proc/mtd" <<'EOF'
 dev:    size   erasesize  name
 mtd1: 00100000 00020000 "0:mibib"
@@ -21,6 +22,8 @@ printf '21\n' > "$TMP/device/sys/class/ubi/ubi0/mtd_num"
 printf 'kernel\n' > "$TMP/device/sys/class/ubi/ubi0_0/name"
 printf 'rootfs\n' > "$TMP/device/sys/class/ubi/ubi0_1/name"
 printf 'rootfs_data\n' > "$TMP/device/sys/class/ubi/ubi0_2/name"
+printf '18350080\n' > "$TMP/device/sys/class/mtd/mtd21/offset"
+printf '261619712\n' > "$TMP/device/sys/class/mtd/mtd22/offset"
 dd if=/dev/zero of="$TMP/device/dev/mtd1" bs=262144 count=1 2>/dev/null
 dd if=/dev/zero of="$TMP/device/dev/mtd15" bs=653422 count=1 2>/dev/null
 cp "$TMP/device/dev/mtd15" "$TMP/device/dev/mtd16"
@@ -52,6 +55,8 @@ COMPANYWRT_PREFLIGHT_TEST_MODE=1 \
 	"$ROOT/scripts/ax9000-darkyun-preflight.sh" --test-mode --spec "$TMP/spec.json" --output "$TMP/evidence.env" > "$TMP/pass.out"
 grep -qx 'RESULT=PASS' "$TMP/evidence.env"
 grep -qx 'PARTITION_VARIANT=darkyun-large-ubi-v1' "$TMP/evidence.env"
+grep -qx 'ROOTFS_OFFSET_HEX=01180000' "$TMP/evidence.env"
+grep -qx 'CFG_BAK_OFFSET_HEX=0f980000' "$TMP/evidence.env"
 grep -qx "MIBIB_SHA256=$MIBIB_SHA" "$TMP/evidence.env"
 grep -qx "APPSBL_PRIMARY_SHA256=$APPSBL_SHA" "$TMP/evidence.env"
 grep -qx "APPSBL_SECONDARY_SHA256=$APPSBL_SHA" "$TMP/evidence.env"
@@ -75,6 +80,13 @@ if COMPANYWRT_DEVICE_ROOT="$TMP/device" COMPANYWRT_PREFLIGHT_TEST_MODE=1 \
 	exit 1
 fi
 printf 'fixture platform upgrade\n' > "$TMP/device/lib/upgrade/platform.sh"
+printf '18350081\n' > "$TMP/device/sys/class/mtd/mtd21/offset"
+if COMPANYWRT_DEVICE_ROOT="$TMP/device" COMPANYWRT_PREFLIGHT_TEST_MODE=1 \
+	"$ROOT/scripts/ax9000-darkyun-preflight.sh" --test-mode --spec "$TMP/spec.json" --output "$TMP/bad-offset.env" > "$TMP/bad-offset.out" 2>&1; then
+	echo 'wrong live rootfs offset unexpectedly passed' >&2
+	exit 1
+fi
+printf '18350080\n' > "$TMP/device/sys/class/mtd/mtd21/offset"
 sed 's/mtd21: 0e800000/mtd21: 0b680000/' "$TMP/device/proc/mtd" > "$TMP/device/proc/mtd.bad"
 mv "$TMP/device/proc/mtd.bad" "$TMP/device/proc/mtd"
 if COMPANYWRT_DEVICE_ROOT="$TMP/device" COMPANYWRT_PREFLIGHT_TEST_MODE=1 \

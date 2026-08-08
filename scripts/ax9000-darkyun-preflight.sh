@@ -11,7 +11,9 @@ MIBIB_READ_LENGTH=262144
 APPSBL_READ_LENGTH=653422
 EXPECTED_ROOTFS_SIZE=0e800000
 EXPECTED_ERASE_SIZE=00020000
+EXPECTED_ROOTFS_OFFSET=01180000
 EXPECTED_CFG_BAK_SIZE=00080000
+EXPECTED_CFG_BAK_OFFSET=0f980000
 EXPECTED_SYSUPGRADE_SHA256=043e8dbb000658421c303db62c6be5196f211740a1646bb988fce79fbc722f34
 EXPECTED_PLATFORM_SHA256=af77cea58f86403363a13164c37926c0c1c3a451448688ce25629117f4d7d406
 EXPECTED_NAND_SHA256=150eb40ac1ae56ffe1d4fcb512a8e9c8a67e5d76c3bc56fb176832aeeda4e7c5
@@ -78,7 +80,9 @@ PY
 	APPSBL_READ_LENGTH=$(json_get '.appsbl.read_length')
 	EXPECTED_ROOTFS_SIZE=$(json_get '.rootfs.size_hex' | sed 's/^0x//')
 	EXPECTED_ERASE_SIZE=$(json_get '.rootfs.erase_size_hex' | sed 's/^0x//')
+	EXPECTED_ROOTFS_OFFSET=$(json_get '.rootfs.offset_hex' | sed 's/^0x//')
 	EXPECTED_CFG_BAK_SIZE=$(json_get '.cfg_bak.size_hex' | sed 's/^0x//')
+	EXPECTED_CFG_BAK_OFFSET=$(json_get '.cfg_bak.offset_hex' | sed 's/^0x//')
 	EXPECTED_SYSUPGRADE_SHA256=$(json_get '.migration_stack.sysupgrade_sha256')
 	EXPECTED_PLATFORM_SHA256=$(json_get '.migration_stack.platform_sha256')
 	EXPECTED_NAND_SHA256=$(json_get '.migration_stack.nand_sha256')
@@ -157,6 +161,22 @@ MIBIB_MTD=$(mtd_number '0:mibib')
 APPSBL_MTD=$(mtd_number '0:appsbl')
 APPSBL_1_MTD=$(mtd_number '0:appsbl_1')
 ROOTFS_MTD=$(mtd_number rootfs)
+CFG_BAK_MTD=$(mtd_number cfg_bak)
+
+mtd_offset_hex() {
+	mtd=$1
+	label=$2
+	offset_file="$DEVICE_ROOT/sys/class/mtd/mtd$mtd/offset"
+	[ -r "$offset_file" ] || { echo "cannot read live MTD offset for $label" >&2; exit 1; }
+	offset_decimal=$(cat "$offset_file")
+	printf '%s\n' "$offset_decimal" | grep -Eq '^[0-9]+$' || { echo "invalid live MTD offset for $label" >&2; exit 1; }
+	printf '%08x\n' "$offset_decimal"
+}
+
+ROOTFS_OFFSET_ACTUAL=$(mtd_offset_hex "$ROOTFS_MTD" rootfs)
+CFG_BAK_OFFSET_ACTUAL=$(mtd_offset_hex "$CFG_BAK_MTD" cfg_bak)
+[ "$ROOTFS_OFFSET_ACTUAL" = "$EXPECTED_ROOTFS_OFFSET" ] || { echo 'rootfs live MTD offset mismatch' >&2; exit 1; }
+[ "$CFG_BAK_OFFSET_ACTUAL" = "$EXPECTED_CFG_BAK_OFFSET" ] || { echo 'cfg_bak live MTD offset mismatch' >&2; exit 1; }
 MIBIB_ACTUAL=$(hash_prefix "$DEVICE_ROOT/dev/mtd$MIBIB_MTD" "$MIBIB_READ_LENGTH")
 APPSBL_ACTUAL=$(hash_prefix "$DEVICE_ROOT/dev/mtd$APPSBL_MTD" "$APPSBL_READ_LENGTH")
 APPSBL_1_ACTUAL=$(hash_prefix "$DEVICE_ROOT/dev/mtd$APPSBL_1_MTD" "$APPSBL_READ_LENGTH")
@@ -198,7 +218,9 @@ umask 077
 	printf 'FORMAT=companywrt-darkyun-preflight-v1\n'
 	printf 'RESULT=PASS\n'
 	printf 'PARTITION_VARIANT=%s\n' "$PARTITION_VARIANT"
-	printf 'ROOTFS_MTD=mtd%s\nROOTFS_SIZE_HEX=%s\nERASE_SIZE_HEX=%s\n' "$ROOTFS_MTD" "$EXPECTED_ROOTFS_SIZE" "$EXPECTED_ERASE_SIZE"
+	printf 'ROOTFS_MTD=mtd%s\nROOTFS_OFFSET_HEX=%s\nROOTFS_SIZE_HEX=%s\nERASE_SIZE_HEX=%s\n' \
+		"$ROOTFS_MTD" "$ROOTFS_OFFSET_ACTUAL" "$EXPECTED_ROOTFS_SIZE" "$EXPECTED_ERASE_SIZE"
+	printf 'CFG_BAK_OFFSET_HEX=%s\n' "$CFG_BAK_OFFSET_ACTUAL"
 	printf 'UBI_VOLUMES=kernel,rootfs,rootfs_data\n'
 	printf 'MIBIB_SHA256=%s\n' "$MIBIB_ACTUAL"
 	printf 'APPSBL_PRIMARY_SHA256=%s\n' "$APPSBL_ACTUAL"

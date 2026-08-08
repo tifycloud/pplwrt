@@ -181,7 +181,6 @@ validate_secret_path() {
 	case "$secret_real" in "$root_real"/*) echo "refusing $description stored inside the repository" >&2; exit 1 ;; esac
 }
 if [ "$COMPILE_ONLY" -eq 1 ]; then
-	[ "$CHANNEL" != stable ] || { echo '--compile-only cannot produce a stable candidate' >&2; exit 1; }
 	[ -z "$SIGNING_KEY" ] && [ -z "$CURRENT_SIGNING_KEY" ] || { echo '--compile-only refuses private signing keys' >&2; exit 1; }
 else
 	validate_secret_path "$SIGNING_KEY" 'manifest usign private key (--signing-key or USIGN_SECRET_KEY_FILE)'
@@ -480,6 +479,8 @@ DTC="$SOURCE_DIR/staging_dir/host/bin/dtc" \
 	--tested-firmware-sha256 "$TESTED_FIRMWARE_SHA256"
 
 if [ "$COMPILE_ONLY" -eq 1 ]; then
+	tar --zstd -cf "$OUTPUT_WORK/BUILD-HOST-USIGN.tar.zst" \
+		-C "$SOURCE_DIR/staging_dir/host" bin/usign bin/.usign.bin lib
 	{
 		printf 'UNSIGNED DEVELOPMENT PREFLIGHT ONLY\n'
 		printf 'This directory is not a release bundle and must not be flashed.\n'

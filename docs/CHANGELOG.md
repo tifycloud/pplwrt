@@ -10,8 +10,9 @@
   为单 UBI `kernel/rootfs/rootfs_data`；历史标准布局 RC 明确禁止刷入。
 - 从官方 ImageBuilder 切换为固定 OpenWrt 25.12.5/feeds commit 的完整 Buildroot；新增
   `xiaomi_ax9000_darkyun` DTS/profile/board/upgrade patch，不生成 factory 镜像。
-- 新增 MIBIB/APPSBL/MTD/UBI 只读迁移 preflight；release manifest、OTA、production gate
-  绑定专属 board、partition variant 和 bootloader 指纹。
+- 新增 MIBIB/APPSBL/MTD offset/UBI 只读迁移 preflight，并固定当前 KWRT
+  `sysupgrade/platform/nand` 三份脚本指纹；release manifest、OTA、production gate 绑定
+  专属 board、partition variant 和 bootloader 指纹。
 - inspector 从 sysupgrade FIT 提取 DTB，拒绝 `ubi_kernel`，要求 232 MiB rootfs、cfg_bak、
   `/dev/ubiblock0_1` 与专属 compatible 全部吻合。
 
@@ -19,6 +20,9 @@
   `origin/main` HEAD 精确相等；签名 job 绑定 `firmware-signing` environment（审批、冷却、
   仅 `main` branch/`v*` tag policy）。active tag ruleset 禁止 `v*` 删除/非 fast-forward，
   仍允许合法新 RC tag。
+- 完整 OpenWrt Buildroot/inspector 在无 secret job 中完成；unsigned bundle 先封存
+  SHA256SUMS。隔离签名 job 重新核验 protected main、source commit、内容报告和真机状态，
+  只生成 manifest/签名，不调用编译器、make 或下载步骤。
 - 开启 GitHub 原生 immutable releases；先上传完整 draft 再发布，发布后逐资产比对 digest，
   并验证 GitHub release attestation 和每个本地资产。
 - 完成 RC1→RC2 显式 usign 轮换：旧 key 主签保证 RC1 可升级，新 key 共签并嵌入 RC2；
