@@ -96,6 +96,10 @@ PACKAGES=$(awk 'NF && $1 !~ /^#/ {printf "%s ", $1}' "$ROOT/configs/ax9000/packa
 rm -f "$IB_DIR/.profiles.mk"
 make -C "$IB_DIR" manifest PROFILE="$PROFILE" PACKAGES="$PACKAGES" > "$OUTPUT/manifest"
 make -C "$IB_DIR" image PROFILE="$PROFILE" PACKAGES="$PACKAGES" FILES="$OVERLAY" BIN_DIR="$OUTPUT" EXTRA_IMAGE_NAME="companywrt-$CHANNEL"
+# ImageBuilder leaves a lowercase checksum sidecar in BIN_DIR.  Keep the
+# generated uppercase checksum file as the single release checksum asset;
+# GitHub release asset names are case-insensitive.
+rm -f "$OUTPUT/sha256sums" "$OUTPUT/SHA256SUMS"
 IMAGE=$(find "$OUTPUT" -maxdepth 1 -type f -name "*xiaomi_ax9000*squashfs-sysupgrade.bin" -print | sort | tail -1)
 [ -n "$IMAGE" ] || { echo "sysupgrade image was not produced" >&2; exit 1; }
 IMAGE_NAME=$(basename "$IMAGE")
