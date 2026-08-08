@@ -13,7 +13,7 @@ printf 'unsigned firmware fixture\n' > "$INPUT/openwrt-25.12.5-xiaomi_ax9000_dar
 IMAGE_SHA=$(sha256sum "$INPUT/openwrt-25.12.5-xiaomi_ax9000_darkyun-squashfs-sysupgrade.bin" | awk '{print $1}')
 {
 	i=1
-	while [ "$i" -le 250 ]; do
+	while [ "$i" -le 252 ]; do
 		printf 'fixture-package-%03d - 1.0\n' "$i"
 		i=$((i + 1))
 	done
@@ -35,7 +35,7 @@ openwrt_commit=f0a60eee2fe051741c643ea6118718aae1ef17fb
 source_commit=$SOURCE_COMMIT
 device_patch_sha256=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
 build_system=full-openwrt-buildroot
-package_count=250
+package_count=252
 release_signing=NOT_PERFORMED_COMPILE_ONLY
 hardware_validation=NOT_PERFORMED_RC_ONLY
 EOF

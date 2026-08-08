@@ -49,7 +49,8 @@ artifacts/beta/25.12.5-company.2-beta1/  # 仅 -betaN VERSION 的显式 beta 构
 4. VERSION/build.conf/设备规格/公钥/OTA/迁移 preflight/LuCI/首启 HTTPS 文件存在；
 5. 官方 loopback/DSA/WAN6 生成逻辑、WAN/WAN6 REJECT zone 和默认 firewall rules 保留；
    首启 overlay 不含默认密码或 WAN ACCEPT；
-6. 暗云大分区目标固定的 250 个唯一 PACKAGE-MANIFEST 包与 CycloneDX 上游组件一一映射；缺失组件补成
+6. 暗云大分区目标固定的 252 个唯一 PACKAGE-MANIFEST 包与 CycloneDX 上游组件一一映射；其中包含由
+   `CONFIG_LUCI_LANG_zh_Hans` 生成的 Base、PBR、防火墙和软件包管理器中文包；缺失组件补成
    `NOASSERTION`，custom overlay 进入 CUSTOM-COMPONENTS、NOTICE 和 MIT LICENSE；
 7. 无密钥编译目录先以 SHA256SUMS 封存；隔离签名 job 重新绑定 commit/内容报告/真机
    evidence，只运行固定 host usign，不运行 make、编译器或网络下载；

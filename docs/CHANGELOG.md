@@ -32,7 +32,7 @@
 - RC 证据状态固定为 `NOT_PERFORMED_RC_ONLY`。stable 构建必须读取且验证精确 gate 文件，
   把 `VERIFIED`、gate SHA、opaque hardware/serial evidence IDs 和被测固件 SHA 写入
   BUILD-METADATA、内容报告与严格 v2 release manifest，并要求构建 SHA 精确相等。
-- CycloneDX 以暗云大分区目标构建出的 250 个唯一 PACKAGE-MANIFEST 包为基准建立一一上游组件映射；
+- CycloneDX 以暗云大分区目标构建出的 252 个唯一 PACKAGE-MANIFEST 包为基准建立一一上游组件映射；
   补齐 `libnghttp2-14` 缺项。无法从上游 SBOM 证明的许可证写 `NOASSERTION`，不宣称
   完整许可证结论。
 - network plan 对 domain 大小写、IPv4 `/32`、CIDR host bits、单端口范围做规范化，拒绝
