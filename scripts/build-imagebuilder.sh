@@ -147,7 +147,10 @@ DECLARED_PREVIOUS_KEY_ID=$(rotation_value PREVIOUS_KEY_ID)
 DECLARED_CURRENT_KEY_ID=$(rotation_value CURRENT_KEY_ID)
 printf '%s\n' "$DECLARED_PREVIOUS_KEY_ID" | grep -Eq '^[0-9a-f]{16}$' || { echo 'previous rotation key ID must be 16 lowercase hex' >&2; exit 1; }
 printf '%s\n' "$DECLARED_CURRENT_KEY_ID" | grep -Eq '^[0-9a-f]{16}$' || { echo 'current rotation key ID must be 16 lowercase hex' >&2; exit 1; }
-[ -s "$PREVIOUS_PUBLIC_KEY" ] && [ -s "$EMBEDDED_PUBLIC_KEY" ] || { echo 'declared usign public keys are missing' >&2; exit 1; }
+if [ ! -s "$PREVIOUS_PUBLIC_KEY" ] || [ ! -s "$EMBEDDED_PUBLIC_KEY" ]; then
+	echo 'declared usign public keys are missing' >&2
+	exit 1
+fi
 
 KEY_TRANSITION=0
 MANIFEST_PUBLIC_KEY=$EMBEDDED_PUBLIC_KEY

@@ -68,7 +68,9 @@ DEVICE_ROOT=${COMPANYWRT_DEVICE_ROOT:-}
 if [ "$TEST_MODE" -eq 1 ]; then
 	[ "${COMPANYWRT_OTA_TEST_MODE:-}" = 1 ] || ota_die "--test-mode requires COMPANYWRT_OTA_TEST_MODE=1"
 	case "$DEVICE_ROOT" in /*) ;; *) ota_die "--test-mode requires an absolute COMPANYWRT_DEVICE_ROOT" ;; esac
-	[ -d "$DEVICE_ROOT" ] && [ ! -L "$DEVICE_ROOT" ] || ota_die "--test-mode device root must be a real directory"
+	if [ ! -d "$DEVICE_ROOT" ] || [ -L "$DEVICE_ROOT" ]; then
+		ota_die "--test-mode device root must be a real directory"
+	fi
 	test_parent=$(realpath "${TMPDIR:-/tmp}") || ota_die "cannot resolve temporary directory"
 	test_device_root=$(realpath "$DEVICE_ROOT") || ota_die "cannot resolve test device root"
 	case "$test_device_root" in "$test_parent"/*) ;; *) ota_die "--test-mode device root must be below the process temporary directory" ;; esac

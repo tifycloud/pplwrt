@@ -53,11 +53,11 @@ done
 printf '%s\n' "$EMBEDDED_KEY_ID" | grep -Eq '^[0-9a-f]{16}$' || { echo 'embedded key ID must be 16 lowercase hex' >&2; exit 1; }
 case "$HARDWARE_VALIDATION" in
 	NOT_PERFORMED_RC_ONLY)
-		[ "$PRODUCTION_GATE_SHA256" = NONE ] && [ "$HARDWARE_EVIDENCE_ID" = NONE ] && \
-			[ "$SERIAL_EVIDENCE_ID" = NONE ] && [ "$TESTED_FIRMWARE_SHA256" = NONE ] || {
+		if [ "$PRODUCTION_GATE_SHA256" != NONE ] || [ "$HARDWARE_EVIDENCE_ID" != NONE ] || \
+			[ "$SERIAL_EVIDENCE_ID" != NONE ] || [ "$TESTED_FIRMWARE_SHA256" != NONE ]; then
 			echo 'RC inspection cannot carry production evidence values' >&2
 			exit 1
-		}
+		fi
 		;;
 	VERIFIED)
 		printf '%s\n' "$PRODUCTION_GATE_SHA256" "$TESTED_FIRMWARE_SHA256" | \
