@@ -30,6 +30,12 @@ if "$ROOT/scripts/build-buildroot.sh" --channel stable --print-output > /dev/nul
 	exit 1
 fi
 grep -Fq 'OpenWrt source checkout failed after 3 attempts' "$ROOT/scripts/build-buildroot.sh"
+grep -Fq 'refusing full Buildroot compilation as root' "$ROOT/scripts/build-buildroot.sh"
+grep -Fq 'setpriv --reuid=1000 --regid=1000 --init-groups' "$ROOT/scripts/build-in-container.sh"
+if grep -q 'FORCE_UNSAFE_CONFIGURE' "$ROOT/scripts/build-buildroot.sh" "$ROOT/scripts/build-in-container.sh"; then
+	echo 'container bypasses an upstream root-build safety check' >&2
+	exit 1
+fi
 if grep -Eq -- '--signing-key|USIGN_SECRET_KEY_FILE|USIGN_CURRENT_SECRET_KEY_FILE' "$ROOT/scripts/build-buildroot.sh" "$ROOT/scripts/build-in-container.sh"; then
 	echo 'compiler entrypoint still accepts release signing secrets' >&2
 	exit 1

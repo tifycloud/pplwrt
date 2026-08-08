@@ -109,6 +109,7 @@ if [ "$PRINT_OUTPUT" -eq 1 ]; then
 	printf '%s\n' "$OUTPUT"
 	exit 0
 fi
+[ "$(id -u)" -ne 0 ] || { echo 'refusing full Buildroot compilation as root; use the non-root container wrapper' >&2; exit 1; }
 
 if [ -z "$SOURCE_COMMIT" ] && command -v git >/dev/null 2>&1 && git -C "$ROOT" rev-parse HEAD >/dev/null 2>&1; then
 	SOURCE_COMMIT=$(git -C "$ROOT" rev-parse HEAD)
