@@ -34,9 +34,9 @@ VERSION=$(awk -F= '$1=="VERSION" {print $2; exit}' "$MANIFEST")
 PROFILE=$(awk -F= '$1=="PROFILE" {print $2; exit}' "$MANIFEST")
 IMAGE=$(awk -F= '$1=="IMAGE" {print $2; exit}' "$MANIFEST")
 SHA256=$(awk -F= '$1=="SHA256" {print $2; exit}' "$MANIFEST")
-[ -n "$VERSION" ] && [ -n "$PROFILE" ] && [ -n "$IMAGE" ] && [ -n "$SHA256" ] || {
+if [ -z "$VERSION" ] || [ -z "$PROFILE" ] || [ -z "$IMAGE" ] || [ -z "$SHA256" ]; then
   echo "manifest must define VERSION, PROFILE, IMAGE and SHA256" >&2; exit 1;
-}
+fi
 [ -z "$EXPECTED_VERSION" ] || [ "$EXPECTED_VERSION" = "$VERSION" ] || { echo "version mismatch: $VERSION" >&2; exit 1; }
 [ "$EXPECTED_PROFILE" = "$PROFILE" ] || { echo "profile mismatch: $PROFILE" >&2; exit 1; }
 printf 'OTA candidate verified: VERSION=%s PROFILE=%s IMAGE=%s SHA256=%s\n' "$VERSION" "$PROFILE" "$IMAGE" "$SHA256"

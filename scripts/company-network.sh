@@ -175,7 +175,9 @@ command -v uci >/dev/null 2>&1 || die "uci is required for apply"
 BACKUP="${OUTPUT}.backup.$(date -u +%Y%m%dT%H%M%SZ)"
 mkdir -p "$BACKUP"
 for f in network firewall pbr; do
-  [ -f "/etc/config/$f" ] && cp -p "/etc/config/$f" "$BACKUP/$f" || true
+  if [ -f "/etc/config/$f" ]; then
+    cp -p "/etc/config/$f" "$BACKUP/$f" || true
+  fi
   uci import "$f" < "$OUTPUT/$f"
 done
 uci commit

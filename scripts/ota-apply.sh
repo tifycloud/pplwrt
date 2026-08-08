@@ -18,17 +18,22 @@ while [ "$#" -gt 0 ]; do
   esac
 done
 [ "$(id -u)" -eq 0 ] || { echo "OTA requires root" >&2; exit 1; }
-[ -n "$IMAGE" ] && [ -f "$IMAGE" ] || { echo "image not found" >&2; exit 1; }
-[ -n "$VERSION" ] && [ "$CONFIRM" = "$VERSION" ] || {
+if [ -z "$IMAGE" ] || [ ! -f "$IMAGE" ]; then
+  echo "image not found" >&2
+  exit 1
+fi
+if [ -z "$VERSION" ] || [ "$CONFIRM" != "$VERSION" ]; then
   echo "explicit administrator confirmation is required: --confirm $VERSION" >&2; exit 1;
-}
+fi
 command -v sysupgrade >/dev/null 2>&1 || { echo "sysupgrade not found; run on OpenWrt" >&2; exit 1; }
 
 mkdir -p "$BACKUP"
 for cfg in /etc/config/network /etc/config/firewall /etc/config/pbr /etc/config/wireless /etc/config/company; do
   [ -f "$cfg" ] && cp -p "$cfg" "$BACKUP/"
 done
-[ -d /var/log ] && tar -czf "$BACKUP/logs.tgz" -C /var/log . 2>/dev/null || true
+if [ -d /var/log ]; then
+  tar -czf "$BACKUP/logs.tgz" -C /var/log . 2>/dev/null || true
+fi
 sha256sum "$IMAGE" > "$BACKUP/image.SHA256"
 printf 'Backup saved at %s\n' "$BACKUP"
 echo "Running sysupgrade dry validation; no reboot yet."
