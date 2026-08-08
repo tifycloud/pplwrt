@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>CompanyWrt 全新安装教程｜AX9000 暗云 Boot</title>
+  <style>
+    :root {
+      --bg: #f3f7f8;
+      --surface: #ffffff;
+      --surface-2: #edf5f5;
+      --ink: #10282d;
+      --muted: #5d7176;
+      --line: #d4e1e3;
+      --teal: #087f79;
+      --teal-dark: #075f5b;
+      --blue: #246fb3;
+      --amber: #9a5b00;
+      --amber-bg: #fff7e5;
+      --red: #a83b35;
+      --red-bg: #fff0ee;
+      --green-bg: #eaf8f3;
+      --code: #10262c;
+      --code-ink: #e6f5f2;
+      --shadow: 0 18px 55px rgba(23, 58, 65, .08);
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--bg);
+      font: 15.5px/1.72 ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+    a { color: var(--teal-dark); text-underline-offset: 3px; }
+    a:hover { color: var(--blue); }
+    .skip {
+      position: fixed; left: 16px; top: -80px; z-index: 20;
+      padding: 10px 14px; background: var(--ink); color: white; border-radius: 8px;
+    }
+    .skip:focus { top: 12px; }
+    .shell {
+      display: grid;
+      grid-template-columns: 260px minmax(0, 760px) 220px;
+      gap: 36px;
+      max-width: 1320px;
+      margin: 0 auto;
+      padding: 32px 28px 72px;
+      align-items: start;
+    }
+    .left, .right { position: sticky; top: 24px; max-height: calc(100vh - 48px); overflow: auto; }
+    .brand { display: flex; gap: 12px; align-items: center; margin: 2px 0 28px; }
+    .brand-mark {
+      width: 42px; height: 42px; display: grid; place-items: center;
+      color: white; font-weight: 800; border-radius: 12px;
+      background: linear-gradient(145deg, var(--teal), var(--blue)); box-shadow: var(--shadow);
+    }
+    .brand strong { display: block; font-size: 16px; }
+    .brand small { color: var(--muted); }
+    nav h2, .right h2 { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+    .nav-list, .toc-list { list-style: none; margin: 0; padding: 0; }
+    .nav-list a, .toc-list a {
+      display: block; border-left: 2px solid transparent; padding: 8px 12px;
+      color: var(--muted); text-decoration: none; border-radius: 0 8px 8px 0;
+    }
+    .nav-list a.active { color: var(--teal-dark); border-left-color: var(--teal); background: var(--surface-2); font-weight: 700; }
+    .toc-list a { padding: 5px 9px; font-size: 13px; }
+    .toc-list a:hover, .nav-list a:hover { color: var(--ink); background: var(--surface-2); }
+    .release-card {
+      margin-top: 28px; padding: 15px; border: 1px solid var(--line); border-radius: 12px;
+      background: var(--surface); box-shadow: 0 8px 30px rgba(23,58,65,.05);
+    }
+    .release-card span { display: block; color: var(--muted); font-size: 12px; }
+    .release-card strong { display: block; margin: 2px 0 8px; font-size: 13px; overflow-wrap: anywhere; }
+    article {
+      min-width: 0; background: var(--surface); border: 1px solid var(--line);
+      border-radius: 18px; box-shadow: var(--shadow); padding: 46px 54px 64px;
+    }
+    .eyebrow { margin: 0 0 12px; color: var(--teal-dark); font-size: 12px; font-weight: 800; letter-spacing: .13em; text-transform: uppercase; }
+    h1 { margin: 0; font-size: clamp(32px, 5vw, 52px); line-height: 1.08; letter-spacing: -.035em; }
+    .lede { margin: 20px 0 28px; font-size: 18px; color: var(--muted); }
+    h2 { margin: 52px 0 14px; padding-top: 4px; font-size: 25px; line-height: 1.25; letter-spacing: -.02em; }
+    h3 { margin: 30px 0 10px; font-size: 18px; }
+    p, li { color: #294147; }
+    strong { color: var(--ink); }
+    .status-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 26px 0 30px; }
+    .status { padding: 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-2); }
+    .status span { display: block; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+    .status strong { display: block; margin-top: 3px; font-size: 14px; }
+    .callout { margin: 22px 0; padding: 17px 20px; border: 1px solid var(--line); border-left: 4px solid var(--teal); border-radius: 10px; background: var(--green-bg); }
+    .callout.warning { border-left-color: var(--amber); background: var(--amber-bg); }
+    .callout.danger { border-left-color: var(--red); background: var(--red-bg); }
+    .callout p:first-child { margin-top: 0; }
+    .callout p:last-child { margin-bottom: 0; }
+    .code-wrap { position: relative; margin: 15px 0 22px; }
+    pre {
+      margin: 0; padding: 19px 56px 19px 20px; overflow-x: auto;
+      border-radius: 11px; background: var(--code); color: var(--code-ink);
+      border: 1px solid rgba(255,255,255,.07); font: 13px/1.62 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    p code, li code, td code { padding: .12em .34em; background: var(--surface-2); border: 1px solid var(--line); border-radius: 5px; font-size: .9em; overflow-wrap: anywhere; }
+    .copy {
+      position: absolute; top: 9px; right: 9px; padding: 6px 8px; cursor: pointer;
+      color: #bad7d5; background: #1b3940; border: 1px solid #36535a; border-radius: 7px;
+      font-size: 11px;
+    }
+    .copy:hover, .copy:focus-visible { color: white; border-color: #7ebcb7; }
+    table { width: 100%; border-collapse: collapse; margin: 18px 0 24px; font-size: 14px; }
+    th, td { padding: 11px 12px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--line); }
+    th { color: var(--muted); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
+    td:first-child { width: 30%; font-weight: 700; color: var(--ink); }
+    ol, ul { padding-left: 22px; }
+    li + li { margin-top: 7px; }
+    .checklist { list-style: none; padding-left: 0; }
+    .checklist li { position: relative; padding-left: 28px; }
+    .checklist li::before { content: "□"; position: absolute; left: 2px; top: -1px; color: var(--teal); font-size: 18px; font-weight: 700; }
+    .final { margin-top: 48px; padding: 26px; color: white; border-radius: 14px; background: linear-gradient(135deg, #086f69, #215c91); }
+    .final h2, .final p, .final strong { color: white; }
+    .final h2 { margin-top: 0; }
+    .footer { margin-top: 34px; font-size: 12px; color: var(--muted); }
+    :focus-visible { outline: 3px solid rgba(36,111,179,.42); outline-offset: 3px; }
+    @media (max-width: 1080px) {
+      .shell { grid-template-columns: 220px minmax(0, 1fr); gap: 24px; }
+      .right { display: none; }
+    }
+    @media (max-width: 900px) {
+      .shell { display: block; padding: 16px; }
+      .left { position: static; max-height: none; margin-bottom: 16px; }
+      .left nav { display: none; }
+      .brand { margin-bottom: 14px; }
+      .release-card { margin: 0 0 16px; }
+      article { padding: 30px 22px 44px; border-radius: 14px; }
+      .status-row { grid-template-columns: 1fr; }
+      table { display: block; overflow-x: auto; }
+    }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0b171a; --surface: #102125; --surface-2: #172d31; --ink: #edf8f7;
+        --muted: #9db1b4; --line: #294247; --teal: #40bdb3; --teal-dark: #73d8d0;
+        --blue: #78b9ef; --amber-bg: #382a14; --red-bg: #3a201f; --green-bg: #14312d;
+        --code: #071215; --code-ink: #d9f4ef;
+      }
+      p, li { color: #c4d4d6; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip" href="#content">跳到教程正文</a>
+  <div class="shell">
+    <aside class="left" data-od-id="fresh-install-nav">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">CW</div>
+        <div><strong>CompanyWrt</strong><small>Operator Manual</small></div>
+      </div>
+      <nav aria-label="文档导航">
+        <h2>安装文档</h2>
+        <ul class="nav-list">
+          <li><a class="active" href="#top">全新安装</a></li>
+          <li><a href="flash.md">刷机与救援</a></li>
+          <li><a href="ax9000-partition-compatibility.md">分区兼容性</a></li>
+          <li><a href="first-config.md">首次配置</a></li>
+          <li><a href="test-matrix.md">生产测试矩阵</a></li>
+        </ul>
+      </nav>
+      <div class="release-card">
+        <span>当前候选</span>
+        <strong>25.12.5-company.2-rc3</strong>
+        <span>只适用于已采证的暗云 Boot 大分区 AX9000</span>
+      </div>
+    </aside>
+
+    <article id="content" data-od-id="fresh-install-article">
+      <header id="top">
+        <p class="eyebrow">Controlled first flash · Xiaomi AX9000</p>
+        <h1>CompanyWrt<br>全新安装教程</h1>
+        <p class="lede">这是一份现场操作手册：从唯一正确的镜像、刷前门禁、正式写入，到首次启动、企业网络配置和真机验收，一步不少。</p>
+        <div class="status-row" aria-label="候选状态">
+          <div class="status"><span>基础系统</span><strong>OpenWrt 25.12.5</strong></div>
+          <div class="status"><span>设备目标</span><strong>AX9000 Darkyun</strong></div>
+          <div class="status"><span>发布状态</span><strong>RC / 非稳定版</strong></div>
+        </div>
+        <div class="callout danger">
+          <p><strong>只适用于这一台已核验设备。</strong></p>
+          <p>官方标准 AX9000 镜像、factory.ubi、历史 CompanyWrt 版本、x86/64 镜像都不能使用。本教程不会改写 MIBIB、U-Boot 或无线校准分区。</p>
+        </div>
+      </header>
+
+      <section id="scope">
+        <h2>01 · 匹配设备身份</h2>
+        <p>开始前必须确认当前路由器是本项目已经采证的 KWRT 设备。它使用暗云 Boot 单 UBI 大分区，当前系统报告 <code>xiaomi,ax9000</code>，迁移后的专属身份则是 <code>xiaomi,ax9000-darkyun</code>。</p>
+        <table>
+          <thead><tr><th>核验项</th><th>必须匹配</th></tr></thead>
+          <tbody>
+            <tr><td>MIBIB SHA256</td><td><code>2d79c1b15b8946af733dba5fff5e33bf3ba18863ed734710bd2a5e48fc469c11</code></td></tr>
+            <tr><td>APPSBL SHA256</td><td><code>80908e502add45ee6aa7ad83aa16ec2c3c8bf27b572ac0f9c3fe404b94fc0007</code>（两份）</td></tr>
+            <tr><td>rootfs MTD</td><td>偏移 <code>0x01180000</code>，大小 <code>0x0e800000</code>（232 MiB）</td></tr>
+            <tr><td>UBI 卷</td><td><code>kernel</code>、<code>rootfs</code>、<code>rootfs_data</code> 位于同一个 rootfs UBI</td></tr>
+            <tr><td>目标 profile</td><td><code>xiaomi_ax9000_darkyun</code></td></tr>
+            <tr><td>分区变体</td><td><code>darkyun-large-ubi-v1</code></td></tr>
+          </tbody>
+        </table>
+        <div class="callout warning">
+          <p><strong>board mismatch 是有意设计。</strong>普通 <code>sysupgrade -T</code> 会拒绝从旧 board 迁往专属 board。只有项目门禁把 MIBIB、APPSBL、MTD、UBI 和升级脚本全部核对通过后，这一次迁移才可使用 <code>-F</code>。</p>
+        </div>
+      </section>
+
+      <section id="prepare">
+        <h2>02 · 准备维护窗口</h2>
+        <ul class="checklist">
+          <li>管理电脑用网线直连 LAN；断开联通、移动 WAN 和其他交换网络。</li>
+          <li>使用稳定电源，最好接 UPS，预留至少 15 分钟无人触碰的时间。</li>
+          <li>提前确认暗云 U-Boot、串口或已验证的恢复方法确实可用。</li>
+          <li>离线备份 KWRT 配置、SSH 主机密钥、校准/BDF、MTD 与 boot 环境证据。</li>
+          <li>备份只用于人工迁移参考，不把整份 KWRT 配置恢复到 CompanyWrt。</li>
+          <li>密码、订阅、私钥、原始备份不进入 Git，也不发送到公共聊天。</li>
+        </ul>
+      </section>
+
+      <section id="download">
+        <h2>03 · 下载与校验镜像</h2>
+        <p>只从 <a href="https://github.com/tifycloud/pplwrt/releases/tag/v25.12.5-company.2-rc3">CompanyWrt RC3 Release</a> 下载下面这个 sysupgrade 文件：</p>
+        <div class="code-wrap"><pre><code>openwrt-qualcommax-ipq807x-xiaomi_ax9000_darkyun-squashfs-sysupgrade.bin</code></pre><button class="copy" type="button">复制</button></div>
+        <table>
+          <tbody>
+            <tr><td>文件大小</td><td>21,371,485 bytes</td></tr>
+            <tr><td>SHA256</td><td><code>577bd2f430c6128f40310ad7f939d613023e0f7b05f978997bddf4a4c536df87</code></td></tr>
+          </tbody>
+        </table>
+        <h3>macOS</h3>
+        <div class="code-wrap"><pre><code>shasum -a 256 openwrt-qualcommax-ipq807x-xiaomi_ax9000_darkyun-squashfs-sysupgrade.bin</code></pre><button class="copy" type="button">复制</button></div>
+        <h3>Linux</h3>
+        <div class="code-wrap"><pre><code>sha256sum openwrt-qualcommax-ipq807x-xiaomi_ax9000_darkyun-squashfs-sysupgrade.bin</code></pre><button class="copy" type="button">复制</button></div>
+        <p>64 位结果必须逐字一致。Release 中的 SHA256SUMS、严格 manifest、usign 签名和 GitHub attestation 已通过独立验证；文件名相似不代表镜像可信。</p>
+      </section>
+
+      <section id="gate">
+        <h2>04 · 确认刷前门禁仍有效</h2>
+        <p>当前这台路由器已经通过硬件指纹、签名、镜像绑定和 <code>sysupgrade -T -F</code> 只读测试。若门禁后路由器没有重启，验证过的候选仍在：</p>
+        <div class="code-wrap"><pre><code>/tmp/companywrt-rc3-gate-7027353/ota/openwrt-qualcommax-ipq807x-xiaomi_ax9000_darkyun-squashfs-sysupgrade.bin</code></pre><button class="copy" type="button">复制</button></div>
+        <p>正式刷写前再检查一次路由器上的文件：</p>
+        <div class="code-wrap"><pre><code>sha256sum '/tmp/companywrt-rc3-gate-7027353/ota/openwrt-qualcommax-ipq807x-xiaomi_ax9000_darkyun-squashfs-sysupgrade.bin'</code></pre><button class="copy" type="button">复制</button></div>
+        <div class="callout danger">
+          <p><strong>路由器如果重启过，就在这里停止。</strong></p>
+          <p><code>/tmp</code> 是内存盘，重启后镜像和门禁结果会消失。必须重新执行完整的签名、硬件指纹和强制测试门禁，不能只上传镜像后手工使用 <code>-F</code>。当前 KWRT 没有内置 usign，不要从未知第三方源随意安装，也不要跳过签名验证。</p>
+        </div>
+      </section>
+
+      <section id="flash">
+        <h2>05 · 执行全新安装</h2>
+        <p>确认有线直连、救援可用、电源稳定、路径存在、SHA256 正确，且现场管理员明确同意后，执行唯一的正式写入命令：</p>
+        <div class="code-wrap"><pre><code>sysupgrade -n -F '/tmp/companywrt-rc3-gate-7027353/ota/openwrt-qualcommax-ipq807x-xiaomi_ax9000_darkyun-squashfs-sysupgrade.bin'</code></pre><button class="copy" type="button">复制</button></div>
+        <ul>
+          <li><code>-n</code> 故意丢弃 KWRT 配置，避免旧插件、网络和防火墙污染新系统。</li>
+          <li><code>-F</code> 只用于这一次已经通过专属门禁的身份迁移，不能当成普通升级参数。</li>
+        </ul>
+        <div class="callout warning">
+          <p><strong>按回车以后：</strong>不要关终端、不要再执行一次、不要拔电、不要按 Reset。等待设备自动完成写入和重启，至少给它 8–10 分钟。指示灯行为与 KWRT 不同也不等于失败。</p>
+        </div>
+      </section>
+
+      <section id="firstboot">
+        <h2>06 · 第一次连接</h2>
+        <p>全新安装默认情况下使用 <code>192.168.1.1</code>。电脑保持自动获取地址，重新插拔网线或更新 DHCP 租约；一个 LAN 口没有地址时可依次尝试其他 LAN 口，仍然不要接 WAN。</p>
+        <div class="code-wrap"><pre><code>https://192.168.1.1/
+ssh root@192.168.1.1</code></pre><button class="copy" type="button">复制</button></div>
+        <p>首次 HTTPS 使用本地自签名证书，浏览器可能告警。确认目标确实是直连路由器后继续。登录后的第一件事是设置唯一、随机、离线保存的管理员密码：</p>
+        <div class="code-wrap"><pre><code>passwd</code></pre><button class="copy" type="button">复制</button></div>
+        <p>然后运行首次 enrollment：</p>
+        <div class="code-wrap"><pre><code>/usr/share/company/enrollment-preflight \
+  --expected-version 25.12.5-company.2-rc3</code></pre><button class="copy" type="button">复制</button></div>
+        <p>保存系统身份和分区状态：</p>
+        <div class="code-wrap"><pre><code>ubus call system board
+cat /etc/companywrt/VERSION
+cat /etc/companywrt/build.conf
+cat /proc/mtd
+ubinfo -a</code></pre><button class="copy" type="button">复制</button></div>
+        <p>预期是版本 <code>25.12.5-company.2-rc3</code>、profile <code>xiaomi_ax9000_darkyun</code>、board <code>xiaomi,ax9000-darkyun</code> 和分区变体 <code>darkyun-large-ubi-v1</code>。任何 FAIL 或不一致都要停止接入生产网络。</p>
+      </section>
+
+      <section id="configure">
+        <h2>07 · 按安全顺序配置</h2>
+        <ol>
+          <li>先设置时区、NTP、密码和 HTTPS，并导出第一次干净配置备份。</li>
+          <li>Wi-Fi 从 <strong>HE80</strong> 开始；HE160 仍是 AX9000 专项测试项。</li>
+          <li>先只接联通宽带，验证 IPv4/IPv6、DNS、NAT 和 WAN 入站拒绝。</li>
+          <li>再接移动专线：联通用于办公和下载，移动用于服务器及指定稳定上传连接。</li>
+          <li>逐个建立 management、office、server、iot、guest VLAN 并测试隔离。</li>
+          <li>先审阅 <code>company-network plan</code>；脚本不会自动应用实时配置。</li>
+          <li>最后加入 WireGuard、日志外发、监控及备份。移动 100M 的 SQM 需单独测，联通 1G 默认不开。</li>
+        </ol>
+        <div class="callout">
+          <p><strong>OpenClash 不预装。</strong>固件没有 OpenClash 本体、Mihomo 核心、订阅或 GEO 数据，只准备了基础依赖。先把原生双 WAN/PBR 跑稳，再按 <a href="openclash.md">OpenClash 文档</a>独立安装，避免 nftables、DNS、fwmark 和 ip rule 互相抢控制权。</p>
+        </div>
+      </section>
+
+      <section id="acceptance">
+        <h2>08 · 真机验收</h2>
+        <table>
+          <thead><tr><th>检查项</th><th>通过标准</th></tr></thead>
+          <tbody>
+            <tr><td>启动可靠性</td><td>连续两次重启和一次断电冷启动正常，UBI 无错误。</td></tr>
+            <tr><td>管理与防火墙</td><td>有线 LuCI/SSH 正常；WAN 侧无法访问管理面。</td></tr>
+            <tr><td>无线</td><td>2.4G 与两路 5G 的 HE80 稳定；HE160 结果单独记录。</td></tr>
+            <tr><td>双 WAN</td><td>联通、移动的地址、DNS、NAT、IPv6、故障回退及上传策略符合设计。</td></tr>
+            <tr><td>VLAN / PBR</td><td>五类 VLAN 隔离正确；每条连接只选择一个出口，回程一致。</td></tr>
+            <tr><td>企业能力</td><td>WireGuard、日志、监控、备份、恢复和 OTA 检查全部通过。</td></tr>
+            <tr><td>救援</td><td>串口/U-Boot/恢复流程与离线文件实际可用。</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="recovery">
+        <h2>09 · 无法启动时</h2>
+        <p>等待满 10 分钟后仍无法访问，不要反复断电。只接一台有线电脑，检查 DHCP、<code>192.168.1.1</code> 和各 LAN 口；随后查看串口/U-Boot 输出，按已验证的暗云 Boot 救援流程处理。保留 MIBIB、APPSBL/U-Boot、校准数据和离线证据，绝不为“试一下”覆盖 bootloader 或改刷官方标准分区镜像。</p>
+      </section>
+
+      <section class="final" id="conclusion">
+        <h2>结论</h2>
+        <p>RC3 对这台已采证的暗云 Boot 大分区 AX9000 已达到<strong>受控现场首次刷写</strong>条件。它还不是企业生产稳定版；只有完成首次刷写，并把启动、无线、双 WAN、VLAN、安全、OTA 和救援矩阵逐项跑通，才能给出最终生产结论。</p>
+      </section>
+      <p class="footer">CompanyWrt operator documentation · 本页不包含设备密码、订阅或私钥。</p>
+    </article>
+
+    <aside class="right" data-od-id="fresh-install-toc">
+      <h2>本页目录</h2>
+      <ol class="toc-list">
+        <li><a href="#scope">01 匹配设备</a></li>
+        <li><a href="#prepare">02 维护准备</a></li>
+        <li><a href="#download">03 下载校验</a></li>
+        <li><a href="#gate">04 刷前门禁</a></li>
+        <li><a href="#flash">05 正式安装</a></li>
+        <li><a href="#firstboot">06 第一次连接</a></li>
+        <li><a href="#configure">07 配置顺序</a></li>
+        <li><a href="#acceptance">08 真机验收</a></li>
+        <li><a href="#recovery">09 故障救援</a></li>
+        <li><a href="#conclusion">最终结论</a></li>
+      </ol>
+    </aside>
+  </div>
+  <script>
+    document.querySelectorAll('.copy').forEach(function (button) {
+      button.addEventListener('click', function () {
+        var code = button.parentElement.querySelector('code').innerText;
+        navigator.clipboard.writeText(code).then(function () {
+          var prior = button.textContent;
+          button.textContent = '已复制';
+          window.setTimeout(function () { button.textContent = prior; }, 1400);
+        });
+      });
+    });
+  </script>
+</body>
+</html>
