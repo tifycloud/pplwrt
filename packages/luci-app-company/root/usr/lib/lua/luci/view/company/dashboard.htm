@@ -75,10 +75,10 @@ local esc = util.pcdata
     </section>
     <section class="company-card">
       <div class="company-card-heading"><div><span class="company-icon company-icon-branch" aria-hidden="true">◇</span><h3>OpenClash 边界</h3></div><span class="company-pill company-pill-warn">按需安装</span></div>
-      <p class="company-card-lead">依赖预装，本体、mihomo 核心与订阅分离。是否安装/运行未在此页断言；TUN 与 nftables tproxy 只能选定一条主路径。</p>
+      <p class="company-card-lead">基础依赖已就绪，但本体、Mihomo 核心、订阅与敏感配置均不预装。需要代理能力时再独立安装；TUN 与 nftables tproxy 只能选定一条主路径。</p>
       <div class="company-ownership"><span>PBR</span><span>→</span><span>未接管流量</span></div>
       <p class="company-note">启用前记录 DNS、fwmark、路由表和 chain owner。</p>
-      <div class="company-actions"><a class="company-button company-button-quiet" href="<%=url('admin','services','openclash')%>">打开 OpenClash</a></div>
+      <div class="company-actions"><span class="company-button company-button-disabled" aria-disabled="true">本体未安装</span></div>
     </section>
   </div>
 

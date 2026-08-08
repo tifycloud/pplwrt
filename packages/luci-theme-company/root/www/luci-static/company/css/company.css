@@ -83,6 +83,8 @@
 .company-button:hover, .company-button:focus-visible { border-color: var(--company-accent-strong); background: var(--company-accent-strong); transform: translateY(-1px); }
 .company-button-quiet { border-color: var(--company-border); background: #fff; color: var(--company-accent-strong) !important; }
 .company-button-quiet:hover, .company-button-quiet:focus-visible { border-color: #9ccbd0; background: var(--company-accent-soft); }
+.company-button-disabled { border-color: var(--company-border); background: var(--company-surface); color: var(--company-muted) !important; cursor: default; }
+.company-button-disabled:hover { border-color: var(--company-border); background: var(--company-surface); transform: none; }
 
 .company-facts { margin: 1rem 0 0; }
 .company-facts > div { display: flex; align-items: baseline; justify-content: space-between; gap: .5rem; padding: .55rem 0; border-bottom: 1px solid #edf1f2; }
