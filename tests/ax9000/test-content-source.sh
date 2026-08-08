@@ -13,7 +13,7 @@ for package in sqm-scripts luci-app-sqm; do
 	fi
 done
 grep -q 'mobile' "$ROOT/configs/overlay/usr/share/company/sqm-mobile-template"
-grep -q 'disabled on `unicom`' "$ROOT/configs/overlay/usr/share/company/sqm-mobile-template"
+grep -Fq "disabled on \`unicom\`" "$ROOT/configs/overlay/usr/share/company/sqm-mobile-template"
 grep -q 'Plain syslog has no confidentiality' "$ROOT/configs/overlay/usr/share/company/log-forwarding-template"
 grep -q '/etc/init.d/collectd disable' "$ROOT/configs/overlay/etc/uci-defaults/99-companywrt"
 if grep -Eq "option enable '[^0]'|config network_(listen|server)" "$ROOT/configs/overlay/etc/config/collectd"; then
@@ -26,19 +26,29 @@ for component in luci-app-company-overlay luci-theme-company-overlay companywrt-
 	grep -Fq "$component" "$ROOT/scripts/inspect-firmware.sh"
 done
 grep -q 'overlay-not-apk' "$ROOT/scripts/augment-sbom.py"
+grep -q 'companywrt:package-manifest-name' "$ROOT/scripts/augment-sbom.py"
+grep -q 'NOASSERTION' "$ROOT/scripts/augment-sbom.py"
+grep -q -- '--package-manifest' "$ROOT/scripts/build-imagebuilder.sh"
 grep -q 'current ImageBuilder pipeline does not compile or install them as APKs' "$ROOT/NOTICE"
 grep -Fq 'THE SOFTWARE IS PROVIDED "AS IS"' "$ROOT/LICENSE"
-grep -Fq 'packages/$package/root' "$ROOT/scripts/build-imagebuilder.sh"
-grep -q 'keys/companywrt-release.pub' "$ROOT/scripts/build-imagebuilder.sh"
+grep -Fq "packages/\$package/root" "$ROOT/scripts/build-imagebuilder.sh"
+grep -q 'CURRENT_PUBLIC_KEY' "$ROOT/scripts/build-imagebuilder.sh"
 grep -q 'inspect-firmware.sh' "$ROOT/scripts/build-imagebuilder.sh"
 grep -Fq 'profiles.json must identify exactly one squashfs sysupgrade image' "$ROOT/scripts/build-imagebuilder.sh"
 grep -Fq 'host Finder metadata leaked into the firmware rootfs' "$ROOT/scripts/inspect-firmware.sh"
+grep -Fq 'rootfs contains a preconfigured root password hash' "$ROOT/scripts/inspect-firmware.sh"
+grep -Fq 'root_password_state=' "$ROOT/scripts/inspect-firmware.sh"
 grep -Fq 'loopback_dsa_wan6_generation=PRESERVED' "$ROOT/scripts/inspect-firmware.sh"
 grep -Fq 'default_firewall_rules=PRESERVED' "$ROOT/scripts/inspect-firmware.sh"
 grep -Fq 'refusing to bind a dirty worktree to a release source commit' "$ROOT/scripts/build-imagebuilder.sh"
 grep -Fq 'ignored files exist in firmware input directories' "$ROOT/scripts/build-in-container.sh"
 
 [ -s "$ROOT/keys/companywrt-release.pub" ]
+[ -s "$ROOT/keys/companywrt-release-previous.pub" ]
+grep -qx 'CURRENT_KEY_ID=444eb53ba66e6d45' "$ROOT/keys/ROTATION.env"
+grep -qx 'PREVIOUS_KEY_ID=679439846de7ada5' "$ROOT/keys/ROTATION.env"
+grep -Fq 'PUBLIC_KEY=/etc/companywrt/keys/release.pub' "$ROOT/scripts/ota-apply.sh"
+grep -Fq -- '--public-key is forbidden in production' "$ROOT/scripts/ota-apply.sh"
 if git -C "$ROOT" ls-files | grep -Eiq '(private|secret).*\.(key|sec)$|(^|/)secret\.key$'; then
 	echo 'private signing key appears tracked' >&2
 	exit 1

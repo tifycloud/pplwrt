@@ -10,7 +10,7 @@ cat > "$MOCK/usign" <<'EOF'
 #!/bin/sh
 set -eu
 if [ "${1:-}" = -F ]; then
-	echo 679439846de7ada5
+	echo 444eb53ba66e6d45
 	exit 0
 fi
 [ "${1:-}" = -q ] && shift
@@ -20,7 +20,7 @@ message=''
 signature=''
 while [ "$#" -gt 0 ]; do
 	case "$1" in
-		-p) grep -q 'RWRnlDmEbeet' "$2" || exit 1; shift 2 ;;
+		-p) grep -q 'RWRETrU7pm5t' "$2" || exit 1; shift 2 ;;
 		-m) message=$2; shift 2 ;;
 		-x) signature=$2; shift 2 ;;
 		*) exit 2 ;;
@@ -81,7 +81,7 @@ SIZE=$IMAGE_SIZE
 URL=https://github.com/tifycloud/pplwrt/releases/download/v25.12.5-company.2-rc1/$IMAGE_NAME
 SIGNATURE=RELEASE-MANIFEST.sig
 SIGNATURE_URL=https://github.com/tifycloud/pplwrt/releases/download/v25.12.5-company.2-rc1/RELEASE-MANIFEST.sig
-USIGN_KEY_ID=679439846de7ada5
+USIGN_KEY_ID=444eb53ba66e6d45
 EOF
 sha256sum "$TMP/manifest" | awk '{print $1}' > "$TMP/manifest.sig"
 
@@ -93,6 +93,37 @@ PATH="$MOCK:$PATH" "$ROOT/scripts/ota-check.sh" \
 grep -q 'VERIFIED_SHA256='"$IMAGE_SHA" "$TMP/check.out"
 grep -q 'No router state was changed' "$TMP/check.out"
 cmp "$TMP/image.bin" "$TMP/checked/$IMAGE_NAME"
+
+cat > "$TMP/stable.manifest" <<EOF
+FORMAT=companywrt-release-v2
+VERSION=25.12.5-company.2
+OPENWRT_RELEASE=25.12.5
+PROFILE=xiaomi_ax9000
+BOARD=xiaomi,ax9000
+CHANNEL=stable
+TAG=v25.12.5-company.2
+SOURCE_COMMIT=0123456789abcdef0123456789abcdef01234567
+IMAGE=$IMAGE_NAME
+SHA256=$IMAGE_SHA
+SIZE=$IMAGE_SIZE
+URL=https://github.com/tifycloud/pplwrt/releases/download/v25.12.5-company.2/$IMAGE_NAME
+SIGNATURE=RELEASE-MANIFEST.sig
+SIGNATURE_URL=https://github.com/tifycloud/pplwrt/releases/download/v25.12.5-company.2/RELEASE-MANIFEST.sig
+USIGN_KEY_ID=444eb53ba66e6d45
+HARDWARE_VALIDATION=VERIFIED
+PRODUCTION_GATE_SHA256=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+HARDWARE_EVIDENCE_ID=hw-record-fixture-001
+SERIAL_EVIDENCE_ID=serial-record-redacted-001
+TESTED_FIRMWARE_SHA256=$IMAGE_SHA
+EOF
+sha256sum "$TMP/stable.manifest" | awk '{print $1}' > "$TMP/stable.sig"
+PATH="$MOCK:$PATH" "$ROOT/scripts/ota-check.sh" \
+	--manifest "$TMP/stable.manifest" --signature "$TMP/stable.sig" --image "$TMP/image.bin" \
+	--public-key "$ROOT/keys/companywrt-release.pub" --download-dir "$TMP/stable-checked" \
+	--version 25.12.5-company.2 --profile xiaomi_ax9000 --board xiaomi,ax9000 --channel stable \
+	> "$TMP/stable.out"
+grep -q 'VERIFIED_HARDWARE_VALIDATION=VERIFIED' "$TMP/stable.out"
+grep -q 'VERIFIED_PRODUCTION_GATE_SHA256=aaaaaaaa' "$TMP/stable.out"
 
 if PATH="$MOCK:$PATH" "$ROOT/scripts/ota-check.sh" \
 	--manifest "$TMP/manifest" --signature "$TMP/manifest.sig" --image "$TMP/image.bin" \
@@ -163,7 +194,30 @@ EOF
 printf '25.12.5-company.1-rc1\n' > "$TMP/device/etc/companywrt/VERSION"
 SYSUPGRADE_LOG="$TMP/sysupgrade.log"
 export SYSUPGRADE_LOG
-PATH="$MOCK:$PATH" COMPANYWRT_DEVICE_ROOT="$TMP/device" "$ROOT/scripts/ota-apply.sh" \
+"$ROOT/scripts/ota-apply.sh" --help > "$TMP/apply-help.out"
+grep -q 'PRODUCTION TRUST ANCHOR IS FIXED' "$TMP/apply-help.out"
+grep -q '/etc/companywrt/keys/release.pub' "$TMP/apply-help.out"
+if PATH="$MOCK:$PATH" "$ROOT/scripts/ota-apply.sh" \
+	--manifest "$TMP/manifest" --signature "$TMP/manifest.sig" --image "$TMP/image.bin" \
+	--public-key "$ROOT/keys/companywrt-release.pub" --work-dir "$TMP/production-override" \
+	--expected-version 25.12.5-company.2-rc1 --expected-channel rc \
+	--confirm-version 25.12.5-company.2-rc1 --confirm-sha256 "$IMAGE_SHA" \
+	>"$TMP/production-override.out" 2>"$TMP/production-override.err"; then
+	echo 'production ota-apply unexpectedly accepted a public key override' >&2
+	exit 1
+fi
+grep -q -- '--public-key is forbidden in production' "$TMP/production-override.err"
+if PATH="$MOCK:$PATH" COMPANYWRT_DEVICE_ROOT="$TMP/device" "$ROOT/scripts/ota-apply.sh" \
+	--test-mode --manifest "$TMP/manifest" \
+	--expected-version 25.12.5-company.2-rc1 --expected-channel rc \
+	--confirm-version 25.12.5-company.2-rc1 --confirm-sha256 "$IMAGE_SHA" \
+	>"$TMP/unarmed-test.out" 2>"$TMP/unarmed-test.err"; then
+	echo 'ota-apply test mode unexpectedly worked without its environment guard' >&2
+	exit 1
+fi
+grep -q 'requires COMPANYWRT_OTA_TEST_MODE=1' "$TMP/unarmed-test.err"
+PATH="$MOCK:$PATH" COMPANYWRT_OTA_TEST_MODE=1 COMPANYWRT_DEVICE_ROOT="$TMP/device" "$ROOT/scripts/ota-apply.sh" \
+	--test-mode \
 	--manifest "$TMP/manifest" --signature "$TMP/manifest.sig" --image "$TMP/image.bin" \
 	--public-key "$ROOT/keys/companywrt-release.pub" --work-dir "$TMP/apply" \
 	--expected-version 25.12.5-company.2-rc1 --expected-channel rc \
@@ -173,7 +227,8 @@ grep -q 'Final manual command (NOT executed)' "$TMP/apply.out"
 [ "$(wc -l < "$SYSUPGRADE_LOG" | tr -d '[:space:]')" = 1 ]
 grep -q '^-T ' "$SYSUPGRADE_LOG"
 
-if PATH="$MOCK:$PATH" COMPANYWRT_DEVICE_ROOT="$TMP/device" "$ROOT/scripts/ota-apply.sh" \
+if PATH="$MOCK:$PATH" COMPANYWRT_OTA_TEST_MODE=1 COMPANYWRT_DEVICE_ROOT="$TMP/device" "$ROOT/scripts/ota-apply.sh" \
+	--test-mode \
 	--manifest "$TMP/manifest" --signature "$TMP/manifest.sig" --image "$TMP/image.bin" \
 	--public-key "$ROOT/keys/companywrt-release.pub" --work-dir "$TMP/bad-confirm" \
 	--expected-version 25.12.5-company.2-rc1 --expected-channel rc \
@@ -184,7 +239,8 @@ if PATH="$MOCK:$PATH" COMPANYWRT_DEVICE_ROOT="$TMP/device" "$ROOT/scripts/ota-ap
 fi
 grep -q 'does not match second confirmation' "$TMP/confirm.err"
 
-if TEST_BOARD=xiaomi,wrong PATH="$MOCK:$PATH" COMPANYWRT_DEVICE_ROOT="$TMP/device" "$ROOT/scripts/ota-apply.sh" \
+if TEST_BOARD=xiaomi,wrong PATH="$MOCK:$PATH" COMPANYWRT_OTA_TEST_MODE=1 COMPANYWRT_DEVICE_ROOT="$TMP/device" "$ROOT/scripts/ota-apply.sh" \
+	--test-mode \
 	--manifest "$TMP/manifest" --signature "$TMP/manifest.sig" --image "$TMP/image.bin" \
 	--public-key "$ROOT/keys/companywrt-release.pub" --work-dir "$TMP/bad-board" \
 	--expected-version 25.12.5-company.2-rc1 --expected-channel rc \
@@ -196,7 +252,8 @@ fi
 grep -q 'device board mismatch' "$TMP/board.err"
 
 printf '25.12.5-company.2-rc2\n' > "$TMP/device/etc/companywrt/VERSION"
-if PATH="$MOCK:$PATH" COMPANYWRT_DEVICE_ROOT="$TMP/device" "$ROOT/scripts/ota-apply.sh" \
+if PATH="$MOCK:$PATH" COMPANYWRT_OTA_TEST_MODE=1 COMPANYWRT_DEVICE_ROOT="$TMP/device" "$ROOT/scripts/ota-apply.sh" \
+	--test-mode \
 	--manifest "$TMP/manifest" --signature "$TMP/manifest.sig" --image "$TMP/image.bin" \
 	--public-key "$ROOT/keys/companywrt-release.pub" --work-dir "$TMP/downgrade" \
 	--expected-version 25.12.5-company.2-rc1 --expected-channel rc \

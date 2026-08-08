@@ -3,7 +3,9 @@
 源码测试、Linux/amd64 构建、squashfs 内容核查和 CI attestation 只允许产出 RC/beta；
 不能替代真机。正式 stable 必须把 `production-gates/TEMPLATE.env` 复制为
 `production-gates/<VERSION>.env`，填入脱敏证据 hash、命名审批人和 UTC 时间，所有门禁
-PASS。模板/占位符/缺项会被 CI 拒绝。
+PASS。`HARDWARE_EVIDENCE_ID`/`SERIAL_EVIDENCE_ID` 只能是受控系统中的 opaque record
+ID，不能是原始设备序列号。模板/占位符/缺项会被 CI 拒绝；gate 文件 SHA、record IDs
+和被测固件 SHA 进入签名 stable v2 manifest。
 
 | 门禁 | RC 自动证据 | stable 真机证据 |
 | --- | --- | --- |
@@ -11,6 +13,7 @@ PASS。模板/占位符/缺项会被 CI 拒绝。
 | 救援 | 官方主题/文档存在 | 厂商恢复或串口成功；错误镜像拒绝；救援耗时 |
 | 断电 | 无 | 刷写/启动关键阶段演练与恢复 PASS（受控测试） |
 | 管理面 | HTTPS redirect 与 preflight 内容检查 | 隔离有线首登、证书、SSH、WAN 扫描、救援主题 PASS |
+| rootfs 密码 | 解包 `/etc/shadow` 并报告 EMPTY/LOCKED | 任意预置 hash 构建失败且检查器不泄漏字段内容 |
 | 无线 | HE80 配置值、HE160 未声明 | 2.4/5 GHz HE80、监管域/BDF、重启；HE160 仅专项 |
 | 双 WAN | plan-only 与注入测试 | unicom 1G、mobile 100M、故障/会话/上传/入站拒绝 |
 | IPv6 | 保留 WAN6、无 destructive import | PD/DNS/firewall/PBR/OpenClash 回归 |

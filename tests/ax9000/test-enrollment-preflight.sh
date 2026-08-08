@@ -51,7 +51,9 @@ RELEASE=25.12.5
 CHANNEL=rc
 EOF
 printf '25.12.5-company.2-rc1\n' > "$DEVICE/etc/companywrt/VERSION"
-printf 'root:$6$fixture$not-a-real-password-hash:20000:0:99999:7:::\n' > "$DEVICE/etc/shadow"
+cat > "$DEVICE/etc/shadow" <<'EOF'
+root:$6$fixture$not-a-real-password-hash:20000:0:99999:7:::
+EOF
 
 PATH="$MOCK:$PATH" COMPANYWRT_DEVICE_ROOT="$DEVICE" "$ROOT/scripts/enrollment-preflight.sh" \
 	--expected-version 25.12.5-company.2-rc1 > "$TMP/pass.out"
@@ -62,7 +64,7 @@ grep -q 'build metadata release matches running OpenWrt 25.12.5' "$TMP/pass.out"
 grep -q 'VERSION base matches build release' "$TMP/pass.out"
 grep -q 'root password is set (hash intentionally not displayed)' "$TMP/pass.out"
 grep -q 'SUMMARY failures=0' "$TMP/pass.out"
-if grep -Fq '$6$fixture' "$TMP/pass.out"; then
+if grep -Fq "\$6\$fixture" "$TMP/pass.out"; then
 	echo 'preflight leaked a password hash' >&2
 	exit 1
 fi
@@ -75,7 +77,9 @@ if PATH="$MOCK:$PATH" COMPANYWRT_DEVICE_ROOT="$DEVICE" "$ROOT/scripts/enrollment
 fi
 grep -q 'FAIL  root password is unset or locked' "$TMP/fail.out"
 
-printf 'root:$6$fixture$not-a-real-password-hash:20000:0:99999:7:::\n' > "$DEVICE/etc/shadow"
+cat > "$DEVICE/etc/shadow" <<'EOF'
+root:$6$fixture$not-a-real-password-hash:20000:0:99999:7:::
+EOF
 sed 's/^RELEASE=.*/RELEASE=25.12.4/' "$DEVICE/etc/companywrt/build.conf" > "$TMP/bad-build.conf"
 cp "$TMP/bad-build.conf" "$DEVICE/etc/companywrt/build.conf"
 if PATH="$MOCK:$PATH" COMPANYWRT_DEVICE_ROOT="$DEVICE" "$ROOT/scripts/enrollment-preflight.sh" \

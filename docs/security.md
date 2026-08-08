@@ -4,6 +4,8 @@
 
 - 只连接隔离的有线 LAN；断开 WAN 与 Wi-Fi 客户端，准备厂商恢复/串口和稳定电源。
 - 镜像不嵌入默认密码。首次登录立即设置密码管理器生成的唯一 root 密码。
+- release inspector 会实际读取解包 rootfs 的 `/etc/shadow` root 字段；只允许明确的
+  `EMPTY` 或 `LOCKED` 初始状态，任意预置 hash 都令构建失败，报告只写状态不写 hash。
 - 首启只设置 hostname/中文/官方 openwrt2020 救援主题和 HTTP→HTTPS redirect；
   不猜 DSA/WAN、不改 firewall/network、不放宽 WAN 入站。
 - 运行 `/usr/share/company/enrollment-preflight --expected-version ...`。board、target、
@@ -34,5 +36,10 @@ SSH 应使用受管公钥并限制管理网段；密码登录策略、host key �
 ## 固件供应链
 
 OTA 要求 HTTPS、严格 schema、usign、实际 SIZE/SHA、board/profile/channel/version、
-`sysupgrade -T` 和双确认。GitHub provenance 是加法防线。第三方 APK、OpenClash core、
+`sysupgrade -T` 和双确认。设备端 `ota-apply` 的生产公钥固定为
+`/etc/companywrt/keys/release.pub`，禁止操作员用 `--public-key` 改写信任锚；test override
+受显式 CLI、环境开关和临时 device root 三重约束。GitHub provenance 是加法防线。
+签名 job 只在 annotated tag 精确等于 protected main 且 `firmware-signing` 审批/冷却通过后
+取 key；release 必须由 GitHub 报告 immutable 并通过发布后 digest/attestation 回验。
+第三方 APK、OpenClash core、
 订阅和规则必须独立核对来源、ABI、签名、许可证和回滚；不得关闭 APK 签名检查。

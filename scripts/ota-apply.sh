@@ -17,8 +17,15 @@ Usage: ota-apply.sh --manifest FILE|HTTPS_URL --expected-version VERSION \
 Options:
   --signature FILE|HTTPS_URL   Override SIGNATURE_URL for an offline bundle
   --image FILE|HTTPS_URL       Override URL for an offline bundle
-  --public-key FILE            Trusted usign public key
   --work-dir DIR               Secure staging directory
+  --test-mode                  TEST AUTOMATION ONLY; never use on a router
+
+PRODUCTION TRUST ANCHOR IS FIXED:
+  /etc/companywrt/keys/release.pub
+
+  --public-key FILE is forbidden in production. It is accepted only together
+  with --test-mode, COMPANYWRT_OTA_TEST_MODE=1 and a temporary
+  COMPANYWRT_DEVICE_ROOT. This escape hatch exists solely for automated tests.
 
 This command requires root and a real xiaomi,ax9000. It re-downloads/copies and
 re-verifies the manifest, usign signature/key id, image size/SHA, profile,
@@ -32,7 +39,9 @@ MANIFEST=""
 SIGNATURE=""
 IMAGE=""
 PUBLIC_KEY="/etc/companywrt/keys/release.pub"
+PUBLIC_KEY_OVERRIDE=""
 WORK_DIR=""
+TEST_MODE=0
 EXPECTED_VERSION=""
 EXPECTED_CHANNEL=""
 CONFIRM_VERSION=""
@@ -43,7 +52,8 @@ while [ "$#" -gt 0 ]; do
 		--manifest) [ "$#" -ge 2 ] || ota_die "missing value for $1"; MANIFEST=$2; shift 2 ;;
 		--signature) [ "$#" -ge 2 ] || ota_die "missing value for $1"; SIGNATURE=$2; shift 2 ;;
 		--image) [ "$#" -ge 2 ] || ota_die "missing value for $1"; IMAGE=$2; shift 2 ;;
-		--public-key) [ "$#" -ge 2 ] || ota_die "missing value for $1"; PUBLIC_KEY=$2; shift 2 ;;
+		--public-key) [ "$#" -ge 2 ] || ota_die "missing value for $1"; PUBLIC_KEY_OVERRIDE=$2; shift 2 ;;
+		--test-mode) TEST_MODE=1; shift ;;
 		--work-dir) [ "$#" -ge 2 ] || ota_die "missing value for $1"; WORK_DIR=$2; shift 2 ;;
 		--expected-version) [ "$#" -ge 2 ] || ota_die "missing value for $1"; EXPECTED_VERSION=$2; shift 2 ;;
 		--expected-channel) [ "$#" -ge 2 ] || ota_die "missing value for $1"; EXPECTED_CHANNEL=$2; shift 2 ;;
@@ -53,6 +63,27 @@ while [ "$#" -gt 0 ]; do
 		*) usage >&2; ota_die "unknown argument: $1" ;;
 	esac
 done
+
+DEVICE_ROOT=${COMPANYWRT_DEVICE_ROOT:-}
+if [ "$TEST_MODE" -eq 1 ]; then
+	[ "${COMPANYWRT_OTA_TEST_MODE:-}" = 1 ] || ota_die "--test-mode requires COMPANYWRT_OTA_TEST_MODE=1"
+	case "$DEVICE_ROOT" in /*) ;; *) ota_die "--test-mode requires an absolute COMPANYWRT_DEVICE_ROOT" ;; esac
+	if [ ! -d "$DEVICE_ROOT" ] || [ -L "$DEVICE_ROOT" ]; then
+		ota_die "--test-mode device root must be a real directory"
+	fi
+	test_parent=$(realpath "${TMPDIR:-/tmp}") || ota_die "cannot resolve temporary directory"
+	test_device_root=$(realpath "$DEVICE_ROOT") || ota_die "cannot resolve test device root"
+	case "$test_device_root" in "$test_parent"/*) ;; *) ota_die "--test-mode device root must be below the process temporary directory" ;; esac
+	if [ -n "$PUBLIC_KEY_OVERRIDE" ]; then
+		PUBLIC_KEY=$PUBLIC_KEY_OVERRIDE
+	else
+		PUBLIC_KEY="$DEVICE_ROOT/etc/companywrt/keys/release.pub"
+	fi
+else
+	[ -z "$PUBLIC_KEY_OVERRIDE" ] || ota_die "--public-key is forbidden in production; the built-in release.pub is mandatory"
+	[ -z "$DEVICE_ROOT" ] || ota_die "COMPANYWRT_DEVICE_ROOT is test-only and requires explicit --test-mode"
+	PUBLIC_KEY=/etc/companywrt/keys/release.pub
+fi
 
 [ "$(id -u)" -eq 0 ] || ota_die "ota-apply requires root on the target router"
 [ -n "$MANIFEST" ] || { usage >&2; exit 2; }
@@ -90,7 +121,6 @@ device_target=$(printf '%s\n' "$board_json" | jsonfilter -e '@.release.target') 
 [ "$device_release" = "$OTA_OPENWRT_RELEASE" ] || ota_die "OpenWrt release mismatch: expected $OTA_OPENWRT_RELEASE, got $device_release"
 [ "$device_target" = qualcommax/ipq807x ] || ota_die "unsupported device target: $device_target"
 
-DEVICE_ROOT=${COMPANYWRT_DEVICE_ROOT:-}
 BUILD_CONF="$DEVICE_ROOT/etc/companywrt/build.conf"
 INSTALLED_VERSION_FILE="$DEVICE_ROOT/etc/companywrt/VERSION"
 [ -s "$BUILD_CONF" ] || ota_die "installed build metadata is missing: $BUILD_CONF"

@@ -9,10 +9,13 @@
 4. **overlay 管理层**：CompanyWrt LuCI、脚本、模板、首启 redirect。当前通过 FILES
    overlay 安装并在 manifest/SBOM/NOTICE 标为 `overlay-not-apk`；Makefile 不等于 APK。
 5. **发布信任层**：固定 ImageBuilder、解包内容检查、严格 usign manifest、SIZE/SHA、
-   GitHub attestation、最小权限 job、RC prerelease 与 stable 真机证据门禁。
+   annotated tag=protected main、`firmware-signing` environment、tag ruleset、GitHub
+   immutable release/attestation、最小权限 job、RC prerelease 与 stable 真机证据门禁。
 
 ImageBuilder 只重组官方 binary packages。需要 DTS/分区/kernel/BDF 修改时必须先提交
 救援/回滚设计，再进入独立 Buildroot；不能用 overlay 伪装硬件支持。
 
 dashboard 和 CI 只能证明配置/构建事实，不能证明真实 WAN、射频、secure boot 或救援。
-因此 company.2-rc1 明确 RC-only，stable 由生产 evidence 文件阻断。
+因此 company.2-rc2 明确 RC-only，stable 由生产 evidence 文件阻断。stable evidence 的
+文件 SHA、opaque hardware/serial record IDs 与精确固件 SHA 同时进入签名 v2 manifest；
+RC 不能继承或硬编码 VERIFIED。

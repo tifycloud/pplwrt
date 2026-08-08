@@ -8,7 +8,7 @@
 
    ```sh
    /usr/share/company/enrollment-preflight \
-     --expected-version 25.12.5-company.2-rc1
+     --expected-version 25.12.5-company.2-rc2
    ```
 
    所有 FAIL 必须解决；WARN 也写入验收记录。

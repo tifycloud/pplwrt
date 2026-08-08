@@ -24,6 +24,8 @@ Options:
 
 Remote inputs are HTTPS-only. The manifest schema, usign signature/key id,
 actual downloaded image size and 64-hex SHA256 are all mandatory.
+Stable candidates additionally require a v2 manifest that binds the exact
+hardware evidence file digest, opaque evidence IDs and tested firmware SHA.
 EOF
 }
 
@@ -77,4 +79,6 @@ printf 'VERIFIED_CHANNEL=%s\n' "$OTA_CHANNEL"
 printf 'VERIFIED_IMAGE=%s\n' "$OTA_STAGED_IMAGE"
 printf 'VERIFIED_SHA256=%s\n' "$OTA_SHA256"
 printf 'VERIFIED_SIZE=%s\n' "$OTA_SIZE"
+printf 'VERIFIED_HARDWARE_VALIDATION=%s\n' "$OTA_HARDWARE_VALIDATION"
+printf 'VERIFIED_PRODUCTION_GATE_SHA256=%s\n' "$OTA_PRODUCTION_GATE_SHA256"
 printf 'No router state was changed. Run ota-apply separately on the target router; it re-verifies everything.\n'

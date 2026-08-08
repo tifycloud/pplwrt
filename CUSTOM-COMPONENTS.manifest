@@ -1,5 +1,5 @@
 # name | version | license | install method | source path
-luci-app-company-overlay | 25.12.5-company.2-rc1 | MIT | ImageBuilder FILES overlay (not an APK) | packages/luci-app-company/root
-luci-theme-company-overlay | 25.12.5-company.2-rc1 | MIT | ImageBuilder FILES overlay (not an APK) | packages/luci-theme-company/root
-companywrt-device-overlay | 25.12.5-company.2-rc1 | MIT | ImageBuilder FILES overlay | configs/overlay
-companywrt-operations-scripts | 25.12.5-company.2-rc1 | MIT | ImageBuilder FILES overlay | scripts
+luci-app-company-overlay | 25.12.5-company.2-rc2 | MIT | ImageBuilder FILES overlay (not an APK) | packages/luci-app-company/root
+luci-theme-company-overlay | 25.12.5-company.2-rc2 | MIT | ImageBuilder FILES overlay (not an APK) | packages/luci-theme-company/root
+companywrt-device-overlay | 25.12.5-company.2-rc2 | MIT | ImageBuilder FILES overlay | configs/overlay
+companywrt-operations-scripts | 25.12.5-company.2-rc2 | MIT | ImageBuilder FILES overlay | scripts

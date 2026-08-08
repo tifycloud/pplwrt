@@ -11,9 +11,16 @@ OUTPUT=""
 FORCE_DOWNLOAD=0
 PRINT_OUTPUT=0
 SIGNING_KEY=${USIGN_SECRET_KEY_FILE:-}
+CURRENT_SIGNING_KEY=${USIGN_CURRENT_SECRET_KEY_FILE:-}
 SOURCE_COMMIT=${COMPANYWRT_SOURCE_COMMIT:-}
 RELEASE_BASE_URL=""
+PRODUCTION_GATE=""
 VERSION=$(sed -n '1p' "$ROOT/VERSION")
+HARDWARE_VALIDATION=NOT_PERFORMED_RC_ONLY
+PRODUCTION_GATE_SHA256=NONE
+HARDWARE_EVIDENCE_ID=NONE
+SERIAL_EVIDENCE_ID=NONE
+TESTED_FIRMWARE_SHA256=NONE
 
 usage() {
 	cat <<'EOF'
@@ -22,16 +29,21 @@ Usage: scripts/build-imagebuilder.sh [options]
   --channel stable|rc|beta
   --build-root DIR
   --output DIR
-  --signing-key FILE        usign private key outside the repository
+  --signing-key FILE        manifest usign private key outside the repository
+  --current-signing-key FILE
+                            current key used for a declared rotation transition
+  --production-gate FILE    exact stable hardware evidence file
   --source-commit 40HEX
   --release-base-url HTTPS_URL
   --force-download
   --print-output            print resolved versioned output and exit
 
 Default output is artifacts/<channel>/<VERSION>/. Every full build requires a
-usign private key matching keys/companywrt-release.pub. The key is never copied
-to FILES or artifacts. Official ImageBuilder host tools require Linux x86_64;
-Apple Silicon must use scripts/build-in-container.sh or GitHub Actions.
+usign private key matching the manifest trust key. A declared rotation build
+also requires the current private key while embedding only the current public
+key. Private keys are never copied to FILES or artifacts. Stable builds require
+the exact production-gates/<VERSION>.env file. Official ImageBuilder host tools
+require Linux x86_64; Apple Silicon must use the container wrapper or CI.
 EOF
 }
 
@@ -42,6 +54,8 @@ while [ "$#" -gt 0 ]; do
 		--build-root) [ "$#" -ge 2 ] || { usage >&2; exit 2; }; BUILD_ROOT=$2; shift 2 ;;
 		--output) [ "$#" -ge 2 ] || { usage >&2; exit 2; }; OUTPUT=$2; shift 2 ;;
 		--signing-key) [ "$#" -ge 2 ] || { usage >&2; exit 2; }; SIGNING_KEY=$2; shift 2 ;;
+		--current-signing-key) [ "$#" -ge 2 ] || { usage >&2; exit 2; }; CURRENT_SIGNING_KEY=$2; shift 2 ;;
+		--production-gate) [ "$#" -ge 2 ] || { usage >&2; exit 2; }; PRODUCTION_GATE=$2; shift 2 ;;
 		--source-commit) [ "$#" -ge 2 ] || { usage >&2; exit 2; }; SOURCE_COMMIT=$2; shift 2 ;;
 		--release-base-url) [ "$#" -ge 2 ] || { usage >&2; exit 2; }; RELEASE_BASE_URL=$2; shift 2 ;;
 		--force-download) FORCE_DOWNLOAD=1; shift ;;
@@ -61,6 +75,30 @@ case "$CHANNEL" in
 	beta) printf '%s\n' "$VERSION" | grep -Eq -- '-beta[1-9][0-9]*$' || { echo 'beta builds require a -betaN VERSION' >&2; exit 1; } ;;
 	stable) printf '%s\n' "$VERSION" | grep -Eq -- '-(rc|beta)[1-9][0-9]*$' && { echo 'stable builds cannot use prerelease VERSION values' >&2; exit 1; } ;;
 esac
+
+gate_value() {
+	key=$1
+	awk -F= -v wanted="$key" '$1 == wanted { print substr($0, index($0, "=") + 1); exit }' "$PRODUCTION_GATE"
+}
+
+if [ "$CHANNEL" = stable ]; then
+	[ -n "$PRODUCTION_GATE" ] || { echo 'stable builds require --production-gate production-gates/<VERSION>.env' >&2; exit 1; }
+	case "$PRODUCTION_GATE" in /*) ;; *) PRODUCTION_GATE="$CALLER_DIR/$PRODUCTION_GATE" ;; esac
+	[ -f "$PRODUCTION_GATE" ] || { echo "production gate not found: $PRODUCTION_GATE" >&2; exit 1; }
+	[ "$(realpath "$PRODUCTION_GATE")" = "$(realpath "$ROOT/production-gates/$VERSION.env")" ] || {
+		echo "stable builds require the exact repository evidence production-gates/$VERSION.env" >&2
+		exit 1
+	}
+	"$ROOT/scripts/verify-production-gate.sh" "$PRODUCTION_GATE" "$VERSION"
+	HARDWARE_VALIDATION=VERIFIED
+	PRODUCTION_GATE_SHA256=$(sha256sum "$PRODUCTION_GATE" | awk '{print $1}')
+	HARDWARE_EVIDENCE_ID=$(gate_value HARDWARE_EVIDENCE_ID)
+	SERIAL_EVIDENCE_ID=$(gate_value SERIAL_EVIDENCE_ID)
+	TESTED_FIRMWARE_SHA256=$(gate_value FIRMWARE_SHA256)
+elif [ -n "$PRODUCTION_GATE" ]; then
+	echo '--production-gate is valid only for stable builds' >&2
+	exit 1
+fi
 
 [ "$PROFILE" = xiaomi_ax9000 ] || { echo "unsupported profile: $PROFILE" >&2; exit 2; }
 if [ -z "$OUTPUT" ]; then
@@ -90,10 +128,52 @@ fi
 case "$RELEASE_BASE_URL" in https://*) ;; *) echo 'release base URL must use HTTPS' >&2; exit 1 ;; esac
 case "$RELEASE_BASE_URL" in *[!A-Za-z0-9._~:/%-]*) echo 'release base URL contains unsupported characters' >&2; exit 1 ;; esac
 
-[ -s "$SIGNING_KEY" ] || { echo 'a non-empty usign private key is required (--signing-key or USIGN_SECRET_KEY_FILE)' >&2; exit 1; }
-key_real=$(realpath "$SIGNING_KEY")
+ROTATION_FILE="$ROOT/keys/ROTATION.env"
+[ -s "$ROTATION_FILE" ] || { echo 'usign rotation declaration is missing' >&2; exit 1; }
+rotation_value() {
+	key=$1
+	awk -F= -v wanted="$key" '$1 == wanted { print substr($0, index($0, "=") + 1); exit }' "$ROTATION_FILE"
+}
+[ "$(rotation_value FORMAT)" = companywrt-usign-rotation-v1 ] || { echo 'unsupported usign rotation declaration' >&2; exit 1; }
+TRANSITION_VERSION=$(rotation_value TRANSITION_VERSION)
+PREVIOUS_PUBLIC_KEY_REL=$(rotation_value PREVIOUS_PUBLIC_KEY)
+CURRENT_PUBLIC_KEY_REL=$(rotation_value CURRENT_PUBLIC_KEY)
+[ "$PREVIOUS_PUBLIC_KEY_REL" = keys/companywrt-release-previous.pub ] || { echo 'unexpected previous public key path in ROTATION.env' >&2; exit 1; }
+[ "$CURRENT_PUBLIC_KEY_REL" = keys/companywrt-release.pub ] || { echo 'unexpected current public key path in ROTATION.env' >&2; exit 1; }
+printf '%s\n' "$TRANSITION_VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+-company\.[0-9]+-(rc|beta)[1-9][0-9]*$' || { echo 'invalid transition VERSION in ROTATION.env' >&2; exit 1; }
+PREVIOUS_PUBLIC_KEY="$ROOT/$PREVIOUS_PUBLIC_KEY_REL"
+EMBEDDED_PUBLIC_KEY="$ROOT/$CURRENT_PUBLIC_KEY_REL"
+DECLARED_PREVIOUS_KEY_ID=$(rotation_value PREVIOUS_KEY_ID)
+DECLARED_CURRENT_KEY_ID=$(rotation_value CURRENT_KEY_ID)
+printf '%s\n' "$DECLARED_PREVIOUS_KEY_ID" | grep -Eq '^[0-9a-f]{16}$' || { echo 'previous rotation key ID must be 16 lowercase hex' >&2; exit 1; }
+printf '%s\n' "$DECLARED_CURRENT_KEY_ID" | grep -Eq '^[0-9a-f]{16}$' || { echo 'current rotation key ID must be 16 lowercase hex' >&2; exit 1; }
+if [ ! -s "$PREVIOUS_PUBLIC_KEY" ] || [ ! -s "$EMBEDDED_PUBLIC_KEY" ]; then
+	echo 'declared usign public keys are missing' >&2
+	exit 1
+fi
+
+KEY_TRANSITION=0
+MANIFEST_PUBLIC_KEY=$EMBEDDED_PUBLIC_KEY
+if [ "$VERSION" = "$TRANSITION_VERSION" ]; then
+	KEY_TRANSITION=1
+	MANIFEST_PUBLIC_KEY=$PREVIOUS_PUBLIC_KEY
+fi
+
 root_real=$(realpath "$ROOT")
-case "$key_real" in "$root_real"/*) echo 'refusing a signing key stored inside the repository' >&2; exit 1 ;; esac
+validate_secret_path() {
+	secret_path=$1
+	description=$2
+	[ -s "$secret_path" ] || { echo "a non-empty $description is required outside the repository" >&2; exit 1; }
+	secret_real=$(realpath "$secret_path")
+	case "$secret_real" in "$root_real"/*) echo "refusing $description stored inside the repository" >&2; exit 1 ;; esac
+}
+validate_secret_path "$SIGNING_KEY" 'manifest usign private key (--signing-key or USIGN_SECRET_KEY_FILE)'
+if [ "$KEY_TRANSITION" -eq 1 ]; then
+	validate_secret_path "$CURRENT_SIGNING_KEY" 'current rotation usign private key (--current-signing-key or USIGN_CURRENT_SECRET_KEY_FILE)'
+elif [ -n "$CURRENT_SIGNING_KEY" ]; then
+	echo 'current rotation signing key was supplied outside the declared transition version' >&2
+	exit 1
+fi
 awk -F'|' -v expected="$VERSION" '
 	/^[[:space:]]*#/ || /^[[:space:]]*$/ { next }
 	{ version=$2; gsub(/^[[:space:]]+|[[:space:]]+$/, "", version); if (version != expected) exit 1 }
@@ -136,11 +216,19 @@ if [ ! -f "$IB_DIR/Makefile" ]; then tar --zstd -xf "$ARCHIVE" -C "$BUILD_ROOT";
 case "$(uname -s):$(uname -m)" in Linux:x86_64|Linux:amd64) ;; *) echo 'ImageBuilder requires Linux x86_64; use build-in-container.sh or CI.' >&2; exit 3 ;; esac
 USIGN_BIN="$IB_DIR/staging_dir/host/bin/usign"
 [ -x "$USIGN_BIN" ] || { echo 'pinned ImageBuilder host usign is missing' >&2; exit 1; }
-PUBLIC_KEY="$ROOT/keys/companywrt-release.pub"
-[ -s "$PUBLIC_KEY" ] || { echo 'trusted release public key is missing' >&2; exit 1; }
-PUBLIC_KEY_ID=$("$USIGN_BIN" -F -p "$PUBLIC_KEY")
+MANIFEST_PUBLIC_KEY_ID=$("$USIGN_BIN" -F -p "$MANIFEST_PUBLIC_KEY")
+EMBEDDED_PUBLIC_KEY_ID=$("$USIGN_BIN" -F -p "$EMBEDDED_PUBLIC_KEY")
 SECRET_KEY_ID=$("$USIGN_BIN" -F -s "$SIGNING_KEY")
-[ "$PUBLIC_KEY_ID" = "$SECRET_KEY_ID" ] || { echo 'usign private key does not match committed public key' >&2; exit 1; }
+[ "$MANIFEST_PUBLIC_KEY_ID" = "$SECRET_KEY_ID" ] || { echo 'manifest usign private key does not match its committed public key' >&2; exit 1; }
+[ "$EMBEDDED_PUBLIC_KEY_ID" = "$DECLARED_CURRENT_KEY_ID" ] || { echo 'current public key ID does not match ROTATION.env' >&2; exit 1; }
+[ "$("$USIGN_BIN" -F -p "$PREVIOUS_PUBLIC_KEY")" = "$DECLARED_PREVIOUS_KEY_ID" ] || { echo 'previous public key ID does not match ROTATION.env' >&2; exit 1; }
+if [ "$KEY_TRANSITION" -eq 1 ]; then
+	CURRENT_SECRET_KEY_ID=$("$USIGN_BIN" -F -s "$CURRENT_SIGNING_KEY")
+	[ "$CURRENT_SECRET_KEY_ID" = "$EMBEDDED_PUBLIC_KEY_ID" ] || { echo 'current rotation private key does not match the embedded public key' >&2; exit 1; }
+	[ "$MANIFEST_PUBLIC_KEY_ID" = "$DECLARED_PREVIOUS_KEY_ID" ] || { echo 'transition manifest must be signed by the declared previous key' >&2; exit 1; }
+else
+	[ "$MANIFEST_PUBLIC_KEY_ID" = "$EMBEDDED_PUBLIC_KEY_ID" ] || { echo 'non-transition manifest must use the embedded current public key' >&2; exit 1; }
+fi
 
 [ ! -e "$OUTPUT" ] || { echo "refusing existing output directory: $OUTPUT" >&2; exit 1; }
 OUTPUT_PARENT=$(dirname "$OUTPUT")
@@ -174,7 +262,7 @@ cp "$ROOT/VERSION" "$OVERLAY/etc/companywrt/VERSION"
 # BUILD-METADATA; embedding the commit would make an evidence file containing
 # the firmware hash self-referential.
 printf 'PROFILE=%s\nRELEASE=%s\nCHANNEL=%s\n' "$PROFILE" "$RELEASE" "$CHANNEL" > "$OVERLAY/etc/companywrt/build.conf"
-cp "$PUBLIC_KEY" "$OVERLAY/etc/companywrt/keys/release.pub"
+cp "$EMBEDDED_PUBLIC_KEY" "$OVERLAY/etc/companywrt/keys/release.pub"
 cp "$ROOT/LICENSE" "$OVERLAY/usr/share/company/LICENSE"
 cp "$ROOT/NOTICE" "$OVERLAY/usr/share/company/NOTICE"
 cp "$ROOT/CUSTOM-COMPONENTS.manifest" "$OVERLAY/usr/share/company/CUSTOM-COMPONENTS.manifest"
@@ -197,7 +285,8 @@ while ! make -C "$IB_DIR" manifest PROFILE="$PROFILE" PACKAGES="$PACKAGES" > "$O
 	attempt=$((attempt + 1))
 done
 awk '/^[A-Za-z0-9][A-Za-z0-9+_.@-]* - [^[:space:]]+$/ { print }' "$OUTPUT_WORK/manifest.raw" | LC_ALL=C sort -u > "$OUTPUT_WORK/PACKAGE-MANIFEST"
-[ "$(wc -l < "$OUTPUT_WORK/PACKAGE-MANIFEST")" -gt 100 ] || { echo 'resolved package manifest is unexpectedly small' >&2; exit 1; }
+[ "$(wc -l < "$OUTPUT_WORK/PACKAGE-MANIFEST" | tr -d '[:space:]')" -eq 251 ] || { echo 'resolved package manifest must contain exactly 251 unique package/version entries' >&2; exit 1; }
+[ "$(awk -F' - ' '{print $1}' "$OUTPUT_WORK/PACKAGE-MANIFEST" | LC_ALL=C sort -u | wc -l | tr -d '[:space:]')" -eq 251 ] || { echo 'resolved package manifest contains duplicate package names' >&2; exit 1; }
 
 EXTRA_IMAGE_NAME="companywrt-$VERSION-$CHANNEL"
 attempt=1
@@ -232,6 +321,12 @@ IMAGE="$OUTPUT_WORK/$IMAGE_NAME"
 [ -f "$IMAGE" ] || { echo "profiles.json sysupgrade image was not produced: $IMAGE_NAME" >&2; exit 1; }
 IMAGE_SHA=$(sha256sum "$IMAGE" | awk '{print $1}')
 IMAGE_SIZE=$(wc -c < "$IMAGE" | tr -d '[:space:]')
+if [ "$HARDWARE_VALIDATION" = VERIFIED ]; then
+	[ "$IMAGE_SHA" = "$TESTED_FIRMWARE_SHA256" ] || {
+		echo 'stable blocked: built firmware does not match the exact hardware-tested digest' >&2
+		exit 1
+	}
+fi
 
 cp "$ROOT/VERSION" "$OUTPUT_WORK/VERSION"
 cp "$ROOT/LICENSE" "$OUTPUT_WORK/LICENSE"
@@ -241,16 +336,33 @@ cp "$ROOT/docs/CHANGELOG.md" "$OUTPUT_WORK/RELEASE-NOTES.md"
 SBOM_COUNT=0
 for sbom in "$OUTPUT_WORK"/*.bom.cdx.json; do
 	[ -f "$sbom" ] || continue
-	python3 "$ROOT/scripts/augment-sbom.py" --sbom "$sbom" --components "$ROOT/CUSTOM-COMPONENTS.manifest"
+	python3 "$ROOT/scripts/augment-sbom.py" \
+		--sbom "$sbom" \
+		--components "$ROOT/CUSTOM-COMPONENTS.manifest" \
+		--package-manifest "$OUTPUT_WORK/PACKAGE-MANIFEST" \
+		--expected-package-count 251
 	SBOM_COUNT=$((SBOM_COUNT + 1))
 done
 [ "$SBOM_COUNT" -ge 1 ] || { echo 'ImageBuilder did not produce a CycloneDX SBOM' >&2; exit 1; }
 
-"$ROOT/scripts/inspect-firmware.sh" --image "$IMAGE" --package-manifest "$OUTPUT_WORK/PACKAGE-MANIFEST" --report "$OUTPUT_WORK/FIRMWARE-CONTENT-REPORT.txt"
+"$ROOT/scripts/inspect-firmware.sh" \
+	--image "$IMAGE" \
+	--package-manifest "$OUTPUT_WORK/PACKAGE-MANIFEST" \
+	--report "$OUTPUT_WORK/FIRMWARE-CONTENT-REPORT.txt" \
+	--embedded-key-id "$EMBEDDED_PUBLIC_KEY_ID" \
+	--hardware-validation "$HARDWARE_VALIDATION" \
+	--production-gate-sha256 "$PRODUCTION_GATE_SHA256" \
+	--hardware-evidence-id "$HARDWARE_EVIDENCE_ID" \
+	--serial-evidence-id "$SERIAL_EVIDENCE_ID" \
+	--tested-firmware-sha256 "$TESTED_FIRMWARE_SHA256"
 
 SIGNATURE_NAME='RELEASE-MANIFEST.sig'
 {
-	printf 'FORMAT=companywrt-release-v1\n'
+	if [ "$HARDWARE_VALIDATION" = VERIFIED ]; then
+		printf 'FORMAT=companywrt-release-v2\n'
+	else
+		printf 'FORMAT=companywrt-release-v1\n'
+	fi
 	printf 'VERSION=%s\n' "$VERSION"
 	printf 'OPENWRT_RELEASE=%s\n' "$RELEASE"
 	printf 'PROFILE=%s\n' "$PROFILE"
@@ -264,17 +376,39 @@ SIGNATURE_NAME='RELEASE-MANIFEST.sig'
 	printf 'URL=%s/%s\n' "$RELEASE_BASE_URL" "$IMAGE_NAME"
 	printf 'SIGNATURE=%s\n' "$SIGNATURE_NAME"
 	printf 'SIGNATURE_URL=%s/%s\n' "$RELEASE_BASE_URL" "$SIGNATURE_NAME"
-	printf 'USIGN_KEY_ID=%s\n' "$PUBLIC_KEY_ID"
+	printf 'USIGN_KEY_ID=%s\n' "$MANIFEST_PUBLIC_KEY_ID"
+	if [ "$HARDWARE_VALIDATION" = VERIFIED ]; then
+		printf 'HARDWARE_VALIDATION=%s\n' "$HARDWARE_VALIDATION"
+		printf 'PRODUCTION_GATE_SHA256=%s\n' "$PRODUCTION_GATE_SHA256"
+		printf 'HARDWARE_EVIDENCE_ID=%s\n' "$HARDWARE_EVIDENCE_ID"
+		printf 'SERIAL_EVIDENCE_ID=%s\n' "$SERIAL_EVIDENCE_ID"
+		printf 'TESTED_FIRMWARE_SHA256=%s\n' "$TESTED_FIRMWARE_SHA256"
+	fi
 } > "$OUTPUT_WORK/RELEASE-MANIFEST"
 "$USIGN_BIN" -S -m "$OUTPUT_WORK/RELEASE-MANIFEST" -s "$SIGNING_KEY" -x "$OUTPUT_WORK/$SIGNATURE_NAME"
-"$USIGN_BIN" -q -V -p "$PUBLIC_KEY" -m "$OUTPUT_WORK/RELEASE-MANIFEST" -x "$OUTPUT_WORK/$SIGNATURE_NAME"
+"$USIGN_BIN" -q -V -p "$MANIFEST_PUBLIC_KEY" -m "$OUTPUT_WORK/RELEASE-MANIFEST" -x "$OUTPUT_WORK/$SIGNATURE_NAME"
+if [ "$KEY_TRANSITION" -eq 1 ]; then
+	NEXT_SIGNATURE_NAME='RELEASE-MANIFEST.next.sig'
+	"$USIGN_BIN" -S -m "$OUTPUT_WORK/RELEASE-MANIFEST" -s "$CURRENT_SIGNING_KEY" -x "$OUTPUT_WORK/$NEXT_SIGNATURE_NAME"
+	"$USIGN_BIN" -q -V -p "$EMBEDDED_PUBLIC_KEY" -m "$OUTPUT_WORK/RELEASE-MANIFEST" -x "$OUTPUT_WORK/$NEXT_SIGNATURE_NAME"
+fi
 
 {
 	printf 'version=%s\nchannel=%s\nprofile=%s\nboard=xiaomi,ax9000\n' "$VERSION" "$CHANNEL" "$PROFILE"
 	printf 'openwrt_release=%s\nsource_commit=%s\n' "$RELEASE" "$SOURCE_COMMIT"
 	printf 'imagebuilder_url=%s\nimagebuilder_sha256=%s\n' "$IB_URL" "$IB_SHA"
-	printf 'usign_key_id=%s\ncustom_components=overlay-not-apk\n' "$PUBLIC_KEY_ID"
-	printf 'hardware_validation=NOT_PERFORMED_RC_ONLY\n'
+	printf 'manifest_usign_key_id=%s\nembedded_usign_key_id=%s\n' "$MANIFEST_PUBLIC_KEY_ID" "$EMBEDDED_PUBLIC_KEY_ID"
+	if [ "$KEY_TRANSITION" -eq 1 ]; then
+		printf 'key_rotation=PREVIOUS_PRIMARY_CURRENT_COSIGN_EMBED_CURRENT\n'
+	else
+		printf 'key_rotation=NONE\n'
+	fi
+	printf 'custom_components=overlay-not-apk\n'
+	printf 'hardware_validation=%s\n' "$HARDWARE_VALIDATION"
+	printf 'production_gate_sha256=%s\n' "$PRODUCTION_GATE_SHA256"
+	printf 'hardware_evidence_id=%s\n' "$HARDWARE_EVIDENCE_ID"
+	printf 'serial_evidence_id=%s\n' "$SERIAL_EVIDENCE_ID"
+	printf 'tested_firmware_sha256=%s\n' "$TESTED_FIRMWARE_SHA256"
 } > "$OUTPUT_WORK/BUILD-METADATA"
 
 (
@@ -293,4 +427,4 @@ SIGNATURE_NAME='RELEASE-MANIFEST.sig'
 mv "$OUTPUT_WORK" "$OUTPUT"
 printf 'OUTPUT=%s\n' "$OUTPUT"
 printf 'IMAGE=%s\n' "$OUTPUT/$IMAGE_NAME"
-printf 'SHA256=%s\nSIZE=%s\nUSIGN_KEY_ID=%s\n' "$IMAGE_SHA" "$IMAGE_SIZE" "$PUBLIC_KEY_ID"
+printf 'SHA256=%s\nSIZE=%s\nMANIFEST_USIGN_KEY_ID=%s\nEMBEDDED_USIGN_KEY_ID=%s\n' "$IMAGE_SHA" "$IMAGE_SIZE" "$MANIFEST_PUBLIC_KEY_ID" "$EMBEDDED_PUBLIC_KEY_ID"

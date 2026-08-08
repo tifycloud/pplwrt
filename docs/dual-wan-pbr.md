@@ -27,6 +27,9 @@ less /tmp/company-network-plan/uci.batch /tmp/company-network-plan/REVIEW.md
 输出只使用 `set network.unicom/mobile`、命名 firewall zone/forwarding 和命名 PBR
 policy；没有 package-wide import/delete、commit 或 reload。具体源、目标域名/IPv4/CIDR、
 TCP/UDP 端口可分别选择 mobile/unicom，最后一条 office 默认 policy 指向 unicom。
+生成器会先规范化 domain 大小写、IPv4 与 `/32`、CIDR host bits、`443-443` 与单端口，
+并检查 CIDR/port range 重叠；同一或重叠 destination/port 不能同时分配给 mobile 和
+unicom，同一 role 内的重复/重叠项也会被拒绝，避免依赖 UCI 顺序产生歧义。
 域名策略要求 `dnsmasq.nftset`，由预装 `dnsmasq-full`/pbr 支持。
 
 ## 人工应用门禁

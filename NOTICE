@@ -9,6 +9,12 @@ The firmware is assembled from official OpenWrt 25.12.5 binary packages. Those
 packages are separate upstream works and retain their own copyright/license
 terms. The generated package manifest and CycloneDX SBOM are the authoritative
 per-build inventory; APK metadata inside the image records package licenses.
+The build verifies one-to-one inventory coverage from all 251 resolved APK
+package names to CycloneDX upstream components. This is not a claim that every
+license conclusion is complete: when ImageBuilder omits a source component or
+license assertion (notably the libnghttp2-14 package in 25.12.5), the augmented
+SBOM records an inventory component with `NOASSERTION`. Consult the pinned APK
+metadata, corresponding source archive and license files before redistribution.
 Key upstream source/license locations are:
 
 * OpenWrt build system/base — GPL-2.0-only; additional package licenses apply:

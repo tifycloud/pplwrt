@@ -11,12 +11,17 @@
 - [OpenWrt generic sysupgrade](https://openwrt.org/docs/guide-user/installation/generic.sysupgrade)
 - [OpenWrt usign source](https://git.openwrt.org/project/usign.git)
 - [GitHub artifact attestation 官方文档](https://docs.github.com/en/actions/security-for-github-actions/using-artifact-attestations)
+- [GitHub immutable releases](https://docs.github.com/en/code-security/concepts/supply-chain-security/immutable-releases)
+- [GitHub deployment environments REST API](https://docs.github.com/en/rest/deployments/environments)
+- [GitHub repository rulesets REST API](https://docs.github.com/en/rest/repos/rules)
 - [OpenClash README（依赖列表）](https://github.com/vernesong/OpenClash/blob/master/README.md)
 - [OpenClash Makefile（当前包依赖）](https://raw.githubusercontent.com/vernesong/OpenClash/master/luci-app-openclash/Makefile)
 - [OpenClash 用户指南](https://github.com/vernesong/OpenClash/blob/dev/.github/skills/openclash-user-guide/SKILL.md)
 
 25.12.5 `profiles.json` 的 `xiaomi_ax9000` 条目给出 `supported_devices: ["xiaomi,ax9000"]`、设备包 `ipq-wifi-xiaomi_ax9000 kmod-ath11k-pci ath11k-firmware-qcn9074 kmod-ath10k-ct ath10k-firmware-qca9887-ct`，以及本文 `devices/ax9000/profile.json` 中的四个官方镜像 SHA256。该条目而非文件名猜测是接受 profile 的依据。
 
-逐包许可证以构建生成的 CycloneDX SBOM/APK metadata 为准；关键上游 copyright/license
-入口汇总在仓库根 `NOTICE`。CompanyWrt overlay 自有内容为 MIT，不能把 upstream package
-许可证概括成单一 MIT。
+逐包 inventory 以构建生成的 PACKAGE-MANIFEST 和 CycloneDX 一一映射为准；许可证仍需
+结合 APK metadata、上游 source archive 与 LICENSE 文件。SBOM 的 `NOASSERTION` 是诚实的
+未知状态，不是许可证缺失或已获许可的结论。关键 upstream copyright/license 入口汇总在
+仓库根 `NOTICE`。CompanyWrt overlay 自有内容为 MIT，不能把 upstream package 许可证
+概括成单一 MIT。

@@ -23,20 +23,32 @@ ota_validate_manifest() {
 			required["TAG"] = 1; required["SOURCE_COMMIT"] = 1; required["IMAGE"] = 1
 			required["SHA256"] = 1; required["SIZE"] = 1; required["URL"] = 1
 			required["SIGNATURE"] = 1; required["SIGNATURE_URL"] = 1; required["USIGN_KEY_ID"] = 1
+			hardware["HARDWARE_VALIDATION"] = 1; hardware["PRODUCTION_GATE_SHA256"] = 1
+			hardware["HARDWARE_EVIDENCE_ID"] = 1; hardware["SERIAL_EVIDENCE_ID"] = 1
+			hardware["TESTED_FIRMWARE_SHA256"] = 1
 		}
 		/\r/ { print "manifest contains CR characters" > "/dev/stderr"; exit 1 }
 		{
 			pos = index($0, "=")
 			if (pos < 2) { print "manifest line is not KEY=value" > "/dev/stderr"; exit 1 }
 			key = substr($0, 1, pos - 1); value = substr($0, pos + 1)
-			if (!(key in required)) { print "unknown manifest field: " key > "/dev/stderr"; exit 1 }
+			if (!(key in required) && !(key in hardware)) { print "unknown manifest field: " key > "/dev/stderr"; exit 1 }
 			if (seen[key]++) { print "duplicate manifest field: " key > "/dev/stderr"; exit 1 }
 			if (value == "") { print "empty manifest field: " key > "/dev/stderr"; exit 1 }
+			values[key] = value
 		}
 		END {
-			if (NR != 15) { print "manifest must contain exactly 15 fields" > "/dev/stderr"; exit 1 }
 			for (key in required) if (!seen[key]) { print "missing manifest field: " key > "/dev/stderr"; exit 1 }
-		}' "$manifest" || ota_die "manifest schema validation failed"
+			if (values["FORMAT"] == "companywrt-release-v1") {
+				if (NR != 15) { print "v1 manifest must contain exactly 15 fields" > "/dev/stderr"; exit 1 }
+				for (key in hardware) if (seen[key]) { print "v1 manifest contains stable-only field: " key > "/dev/stderr"; exit 1 }
+			} else if (values["FORMAT"] == "companywrt-release-v2") {
+				if (NR != 20) { print "v2 manifest must contain exactly 20 fields" > "/dev/stderr"; exit 1 }
+				for (key in hardware) if (!seen[key]) { print "missing v2 manifest field: " key > "/dev/stderr"; exit 1 }
+			} else {
+				print "unsupported manifest format: " values["FORMAT"] > "/dev/stderr"; exit 1
+			}
+			}' "$manifest" || ota_die "manifest schema validation failed"
 
 	OTA_FORMAT=$(ota_manifest_value FORMAT "$manifest")
 	OTA_VERSION=$(ota_manifest_value VERSION "$manifest")
@@ -53,8 +65,13 @@ ota_validate_manifest() {
 	OTA_SIGNATURE=$(ota_manifest_value SIGNATURE "$manifest")
 	OTA_SIGNATURE_URL=$(ota_manifest_value SIGNATURE_URL "$manifest")
 	OTA_USIGN_KEY_ID=$(ota_manifest_value USIGN_KEY_ID "$manifest")
+	OTA_HARDWARE_VALIDATION=$(ota_manifest_value HARDWARE_VALIDATION "$manifest")
+	OTA_PRODUCTION_GATE_SHA256=$(ota_manifest_value PRODUCTION_GATE_SHA256 "$manifest")
+	OTA_HARDWARE_EVIDENCE_ID=$(ota_manifest_value HARDWARE_EVIDENCE_ID "$manifest")
+	OTA_SERIAL_EVIDENCE_ID=$(ota_manifest_value SERIAL_EVIDENCE_ID "$manifest")
+	OTA_TESTED_FIRMWARE_SHA256=$(ota_manifest_value TESTED_FIRMWARE_SHA256 "$manifest")
 
-	[ "$OTA_FORMAT" = companywrt-release-v1 ] || ota_die "unsupported manifest format: $OTA_FORMAT"
+	case "$OTA_FORMAT" in companywrt-release-v1|companywrt-release-v2) ;; *) ota_die "unsupported manifest format: $OTA_FORMAT" ;; esac
 	printf '%s\n' "$OTA_VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+-company\.[0-9]+(-(rc|beta)[1-9][0-9]*)?$' || ota_die "invalid VERSION"
 	printf '%s\n' "$OTA_OPENWRT_RELEASE" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' || ota_die "invalid OPENWRT_RELEASE"
 	printf '%s\n' "$OTA_PROFILE" | grep -Eq '^[a-z0-9][a-z0-9_]{0,63}$' || ota_die "invalid PROFILE"
@@ -62,9 +79,27 @@ ota_validate_manifest() {
 	case "$OTA_CHANNEL" in
 		rc) printf '%s\n' "$OTA_VERSION" | grep -Eq -- '-rc[1-9][0-9]*$' || ota_die "rc channel requires an -rcN version" ;;
 		beta) printf '%s\n' "$OTA_VERSION" | grep -Eq -- '-beta[1-9][0-9]*$' || ota_die "beta channel requires a -betaN version" ;;
-		stable) printf '%s\n' "$OTA_VERSION" | grep -Eq -- '-(rc|beta)[1-9][0-9]*$' && ota_die "stable channel cannot use a prerelease version" ;;
+		stable)
+			printf '%s\n' "$OTA_VERSION" | grep -Eq -- '-(rc|beta)[1-9][0-9]*$' && ota_die "stable channel cannot use a prerelease version"
+			[ "$OTA_FORMAT" = companywrt-release-v2 ] || ota_die "stable channel requires a hardware-bound v2 manifest"
+			;;
 		*) ota_die "invalid CHANNEL: $OTA_CHANNEL" ;;
 	esac
+	if [ "$OTA_FORMAT" = companywrt-release-v2 ]; then
+		[ "$OTA_CHANNEL" = stable ] || ota_die "v2 hardware-bound manifests are stable-only"
+		[ "$OTA_HARDWARE_VALIDATION" = VERIFIED ] || ota_die "v2 manifest requires HARDWARE_VALIDATION=VERIFIED"
+		printf '%s\n' "$OTA_PRODUCTION_GATE_SHA256" "$OTA_TESTED_FIRMWARE_SHA256" | \
+			awk 'length($0) != 64 || $0 !~ /^[0-9a-f]+$/ { exit 1 }' || ota_die "v2 manifest requires 64-hex hardware evidence digests"
+		printf '%s\n' "$OTA_HARDWARE_EVIDENCE_ID" "$OTA_SERIAL_EVIDENCE_ID" | \
+			awk 'length($0) < 3 || length($0) > 128 || $0 !~ /^[A-Za-z0-9][A-Za-z0-9._:-]+$/ { exit 1 }' || ota_die "v2 manifest requires safe opaque evidence IDs"
+		[ "$OTA_TESTED_FIRMWARE_SHA256" = "$OTA_SHA256" ] || ota_die "v2 tested firmware digest must exactly equal SHA256"
+	else
+		OTA_HARDWARE_VALIDATION=NOT_PERFORMED_RC_ONLY
+		OTA_PRODUCTION_GATE_SHA256=NONE
+		OTA_HARDWARE_EVIDENCE_ID=NONE
+		OTA_SERIAL_EVIDENCE_ID=NONE
+		OTA_TESTED_FIRMWARE_SHA256=NONE
+	fi
 	[ "${OTA_VERSION%%-company.*}" = "$OTA_OPENWRT_RELEASE" ] || ota_die "VERSION base must equal OPENWRT_RELEASE"
 	[ "$OTA_TAG" = "v$OTA_VERSION" ] || ota_die "TAG must equal vVERSION"
 	printf '%s\n' "$OTA_SOURCE_COMMIT" | grep -Eq '^[0-9a-f]{40}$' || ota_die "SOURCE_COMMIT must be 40 lowercase hex characters"
