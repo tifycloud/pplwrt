@@ -162,7 +162,7 @@ logd - 1-r1
 luci-app-pbr - 1-r1
 luci-proto-wireguard - 1-r1
 luci-ssl-openssl - 1-r1
-luci-theme-liquid - 0.3.1-r2
+luci-theme-liquid - 0.3.1-r3
 pbr - 1-r1
 usign - 1-r1
 wireguard-tools - 1-r1

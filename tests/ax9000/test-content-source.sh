@@ -43,7 +43,7 @@ awk -F'|' -v expected="$version" '
 		gsub(/^[[:space:]]+|[[:space:]]+$/, "", name)
 		gsub(/^[[:space:]]+|[[:space:]]+$/, "", component_version)
 		if (name == "luci-theme-liquid-company-patch") {
-			if (component_version != "0.3.1-r2") exit 1
+			if (component_version != "0.3.1-r3") exit 1
 		}
 		else if (component_version != expected) exit 1
 	}

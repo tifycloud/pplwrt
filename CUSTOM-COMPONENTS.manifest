@@ -1,5 +1,5 @@
 # name | version | license | install method | source path
 luci-app-company-overlay | 25.12.5-company.2-rc6 | MIT | Buildroot files overlay (not an APK) | packages/luci-app-company/root
-luci-theme-liquid-company-patch | 0.3.1-r2 | GPL-3.0-only (conservative due upstream metadata mismatch) | Source patch compiled into luci-theme-liquid APK | packages/luci-theme-liquid
+luci-theme-liquid-company-patch | 0.3.1-r3 | GPL-3.0-only (conservative due upstream metadata mismatch) | Source patch compiled into luci-theme-liquid APK | packages/luci-theme-liquid
 companywrt-device-overlay | 25.12.5-company.2-rc6 | MIT | Buildroot files overlay | configs/overlay
 companywrt-operations-scripts | 25.12.5-company.2-rc6 | MIT | Buildroot files overlay | scripts

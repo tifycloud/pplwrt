@@ -15,8 +15,9 @@
   上，触摸屏和键盘不再依赖 hover。
 - 控制中心改为更紧凑的操作台布局，直接展示 WAN、`MemAvailable`、实际占用、总量、
   1 分钟负载和终端数，并解释 OpenWrt 传统“已用”会把文件缓存计入。
-- Liquid APK 升为 `0.3.1-r2` 以强制 CSS/JS 缓存版本变化；包集合仍固定 214 个，
-  OpenClash、Mihomo、collectd、Ruby、TUN/TProxy 和 SQM 继续不预装。
+- 新安装默认使用深青灰底色和克制的青绿色强调；亮色、深色和跟随系统模式仍可从顶栏
+  随时切换。Liquid APK 升为 `0.3.1-r3` 以强制 CSS/JS 缓存版本变化；包集合仍固定
+  214 个，OpenClash、Mihomo、collectd、Ruby、TUN/TProxy 和 SQM 继续不预装。
 - 68% 的真机反馈来自原生状态页传统 `Used = total - free` 口径，不能单独证明内存泄漏；
   生产判断仍要求冷启动 10 分钟后的 `memory-report --check-idle` 原始输出和 24 小时复测。
 

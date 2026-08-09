@@ -15,7 +15,7 @@
 	let ptitle = (node ?? dispatched)?.title;
 
 	/* ---- 主题配置（uci /etc/config/liquid，换客户端保留） ---- */
-	let cfg_mode = 'auto';
+	let cfg_mode = 'dark';
 	let cfg_accent = 'custom';
 	let cfg_accent_custom = '#1f7a75';
 	let cfg = fs.readfile('/etc/config/liquid') ?? '';
@@ -50,7 +50,7 @@
 			var m = "{{ cfg_mode }}";
 			var a = "{{ cfg_accent }}";
 			if (!m)
-				m = localStorage.getItem('liquid-theme-mode') || 'auto';
+				m = localStorage.getItem('liquid-theme-mode') || 'dark';
 			if (!a)
 				a = localStorage.getItem('liquid-accent') || 'blue';
 			var dark = (m == 'dark') || ((m != 'light') && window.matchMedia('(prefers-color-scheme: dark)').matches);

@@ -114,15 +114,15 @@
 		root.style.setProperty('--accent-custom-dark-low', hex);
 		root.style.setProperty('--accent-custom-dark-glow', rgba(rgb, 0.42));
 		root.style.setProperty('--accent-custom-dark-grad', 'linear-gradient(135deg, ' + shade(rgb, 0.5) + ' 0%, ' + shade(rgb, 0.3) + ' 48%, ' + shade(rgb, 0.12) + ' 100%)');
-		root.style.setProperty('--accent-custom-dark-glass', 'linear-gradient(135deg, ' + rgba(rgb, 0.28) + ', rgba(46,58,84,0.45))');
-		root.style.setProperty('--accent-custom-dark-glass-soft', 'linear-gradient(135deg, ' + rgba(rgb, 0.22) + ', rgba(46,58,84,0.4))');
+		root.style.setProperty('--accent-custom-dark-glass', 'linear-gradient(135deg, ' + rgba(rgb, 0.28) + ', rgba(21,42,36,0.50))');
+		root.style.setProperty('--accent-custom-dark-glass-soft', 'linear-gradient(135deg, ' + rgba(rgb, 0.22) + ', rgba(21,42,36,0.44))');
 	}
 
 	function getMode() {
 		var d = document.body ? document.body.getAttribute('data-liquid-mode') : null;
 		if (d)
 			return d;
-		try { return localStorage.getItem(MODE_KEY) || 'auto'; } catch (e) { return 'auto'; }
+		try { return localStorage.getItem(MODE_KEY) || 'dark'; } catch (e) { return 'dark'; }
 	}
 
 	function setMode(mode) {

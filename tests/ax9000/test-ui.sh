@@ -38,6 +38,11 @@ done
 for marker in '胖胖龙专用路由器' 'data-liquid-mode' 'data-liquid-accent' 'cascade.css'; do
 	grep -Fq "$marker" "$HEADER"
 done
+grep -Fq "let cfg_mode = 'dark'" "$HEADER"
+grep -Fq 'liquid.theme.mode=dark' "$THEME_DEFAULTS"
+for marker in '--background-color-high: #0b1110' '--menu-bg: rgba(7, 15, 14, 0.82)' 'linear-gradient(160deg, #08100f 0%, #060b0a 52%, #030706 100%)'; do
+	grep -Fq -- "$marker" "$THEME"
+done
 grep -Fq '胖胖龙专用路由器' "$FOOTER"
 grep -Fq "include('header', { blank_page: true })" "$SYSAUTH"
 grep -Fq 'luci-theme-liquid' "$ROOT/packages/luci-theme-liquid/Makefile"
