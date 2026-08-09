@@ -1,6 +1,6 @@
 # Roadmap
 
-## 当前：25.12.5-company.2-rc4（仅 RC）
+## 当前：25.12.5-company.2-rc5（仅 RC）
 
 - 固定官方 OpenWrt/feeds/patch；暗云单 UBI profile、FIT DTB/squashfs 内容检查。
 - plan-only 双 WAN/PBR；严格 signed OTA；安全首启/preflight；完整 LuCI 主题和首次向导。

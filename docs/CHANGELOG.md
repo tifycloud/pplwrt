@@ -1,9 +1,30 @@
 # Changelog
 
+## 25.12.5-company.2-rc5 — 2026-08-09
+
+**Release candidate / NOT PRODUCTION.** RC4 在签名和发布前取消；没有 RC4 Release 或可刷
+资产。RC5 按用户确认的设计方向换用成熟 Liquid 主题，并保留 RC4 已完成的首次设置和
+空载内存优化。
+
+- 固定并 vendor `zzsj0928/luci-theme-liquid` commit
+  `ad0cce67c02ce9ce0154c2f08491fc8ac1daf06b`，由完整 OpenWrt Buildroot 编译为真实
+  `luci-theme-liquid` APK；官方 OpenWrt2020 继续作为救援主题。
+- 登录页、顶栏、页面标题、页脚、控制中心和向导统一显示“胖胖龙专用路由器”；网络
+  hostname 保持兼容 DHCP/DNS 的 `companywrt-ax9000`。
+- 删除上游 Bing 外部壁纸下载、缓存与模板 shell 执行路径；删除直接写文件的主题
+  controller。主题偏好改为已认证 LuCI UCI RPC，并在服务端限定 mode/accent/颜色值。
+- 保留四步主 WAN DHCP/PPPoE、Wi-Fi 和 root 密码向导；CompanyWrt 控制中心视觉与 Liquid
+  明暗模式、移动端和焦点状态统一。
+- Liquid 上游仓库 LICENSE 与源码头/Makefile 的许可证声明不一致；保留完整上游告知并
+  暂按更严格的 GPL-3.0-only 声明，安装许可证正文并在 SBOM 单列 CompanyWrt patch。
+- 预期基础 manifest 为 214 个包，仅比 RC4 增加真正的 Liquid APK；OpenClash、Mihomo、
+  collectd、Ruby、TUN/TProxy 和 SQM 仍不进入基础镜像。
+
 ## 25.12.5-company.2-rc4 — 2026-08-09
 
-**Release candidate / NOT PRODUCTION.** 本轮针对首次刷写后的直接用户反馈重做产品体验与
-空载基线，不继承 RC3 的界面或“安装后再禁用”监控方案。
+**CANCELED BEFORE SIGNING / NO RELEASE / DO NOT FLASH.** 本轮针对首次刷写后的直接用户
+反馈重做产品体验与空载基线；在发布工作流进入签名阶段前因 UI 方向调整而取消。其内存
+瘦身和首装向导由 RC5 继承，但 RC4 tag 不对应任何 Release 资产。
 
 - `luci-theme-company` 从单页 CSS 升级为完整 LuCI 主题，统一导航、表单、表格、状态、
   移动端和键盘焦点；OpenWrt2020 仍作为救援主题保留。

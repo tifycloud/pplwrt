@@ -8,7 +8,7 @@
 
 官方 README 列出的依赖包括 `luci`、`luci-base`、`dnsmasq-full`、`bash`、`curl`、`ca-bundle`、`ipset`、`ip-full`、`ruby`、`ruby-yaml`、`unzip`、`kmod-tun`、`kmod-inet-diag`、`luci-compat`，以及旧 iptables 路径的 `iptables`/`kmod-ipt-nat`/`iptables-mod-tproxy`/`iptables-mod-extra`/`ip6tables-mod-nat` 和 firewall4 路径的 `kmod-nft-tproxy`。
 
-本项目使用 OpenWrt 25.12.5 的 apk + firewall4/nftables。RC4 基础镜像只保留路由器本身
+本项目使用 OpenWrt 25.12.5 的 apk + firewall4/nftables。RC5 基础镜像只保留路由器本身
 需要的 `curl`、`ca-bundle`、`ip-full` 和 `dnsmasq-full`；Ruby、bash、unzip、Lua compatibility、
 TUN/tproxy 等 OpenClash 专用运行依赖不再预装。管理员选定 OpenClash 版本、模式和回滚窗口后，
 再由 apk 解析完整依赖；LuCI 本体、Mihomo、规则与订阅始终独立管理。

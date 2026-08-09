@@ -1,0 +1,197 @@
+<!-- markdownlint-configure-file {
+  "MD013": {
+    "code_blocks": false,
+    "tables": false,
+    "line_length":200
+  },
+  "MD033": false,
+  "MD041": false
+} -->
+
+[license]: /LICENSE
+[license-badge]: https://img.shields.io/github/license/zzsj0928/luci-theme-liquid?style=flat-square&a=1
+[prs]: https://github.com/zzsj0928/luci-theme-liquid/pulls
+[prs-badge]: https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square
+[issues]: https://github.com/zzsj0928/luci-theme-liquid/issues/new
+[issues-badge]: https://img.shields.io/badge/Issues-welcome-brightgreen.svg?style=flat-square
+[release]: https://github.com/zzsj0928/luci-theme-liquid/releases
+[release-badge]: https://img.shields.io/github/v/release/zzsj0928/luci-theme-liquid?style=flat-square
+[download]: https://github.com/zzsj0928/luci-theme-liquid/releases
+[download-badge]: https://img.shields.io/github/downloads/zzsj0928/luci-theme-liquid/total?style=flat-square
+[en-us-link]: /README_EN.md
+[zh-cn-link]: /README.md
+[official]: https://github.com/openwrt/openwrt
+[immortalwrt]: https://github.com/immortalwrt/immortalwrt
+[luci-mod]: https://github.com/xylz0928/luci-mod
+
+<div align="center">
+<p align="center"><img src="logo.svg" width="500"></p>
+
+# 💧 luci-theme-liquid
+
+> **CompanyWrt 说明：** 本目录固定到 `UPSTREAM.md` 记录的上游提交。胖胖龙专用路由器
+> 版本已移除 Bing 外部壁纸、缓存下载与原直接写文件 controller，改用经 ACL 授权并严格
+> 校验的专用 RPC；完整差异、安全边界和许可证不一致说明见 [UPSTREAM.md](UPSTREAM.md)。
+> 下方保留上游 README 作为来源记录，其中 Bing 相关描述不适用于 CompanyWrt 构建。
+
+**macOS 风格 Liquid Glass（液态玻璃）OpenWrt LuCI 主题**，适用于 **LuCI ≥ 23**（OpenWrt 23.05 / 24.10 / master）。
+
+支持**亮色 / 暗色 / 跟随系统**三态切换、**5 套主题色 + 自定义颜色**、可调玻璃模糊与透明度；登录页、侧栏、内容卡片、下拉、悬浮框全链路液态玻璃质感。
+
+[![license][license-badge]][license]
+[![prs][prs-badge]][prs]
+[![issues][issues-badge]][issues]
+[![release][release-badge]][release]
+[![download][download-badge]][download]
+
+**简体中文** | [English][en-us-link]
+
+[特性](#特性) •
+[更新日志](#更新日志) •
+[兼容性](#兼容性) •
+[编译安装](#编译安装) •
+[界面展示](#界面展示) •
+[致谢](#致谢)
+
+<img src="https://raw.githubusercontent.com/zzsj0928/ReadmeContents/master/liquid/luci-theme-liquid_pc.gif">
+
+</div>
+
+## 特性
+
+- **液态玻璃设计语言**：侧栏、内容卡片、登录卡片、页脚统一 frosted-glass（模糊 + 高光 + 主题色光晕），暗色下玻璃更实、文字更清晰。
+- **三态模式切换**：亮色 / 暗色 / 跟随系统，位于顶栏右侧（LuCI 原生刷新/轮询指示区旁），经 uci 持久化（换浏览器/设备仍保留），`localStorage` 仅作降级；页面加载即应用、无闪烁；锁屏页同样提供开关。
+- **主题色切换**：5 套主题色（蓝色 / 玫红 / 橙黄 / 郁金香紫 / 黄绿），选中菜单、hover 滑块、按钮、Tab、logo 全链路联动；另支持**自定义主题色**——点击彩虹圆点输入 hex 颜色编码（`#RRGGBB`）即保存生效，非法值自动回退默认蓝，同样 uci 持久化。
+- **左侧菜单**：默认全部折叠，点击一级菜单才展开其二级菜单；hover 追踪滑块 + 选中玻璃胶囊；移动端滑出菜单自动避让顶栏。
+- **下拉控件**：所有下拉设置项为"保存并应用"式一体化渐变胶囊（主体 + 分隔箭头），点开后的选项列表保留玻璃设计；靠近视口底部自动向上弹出，不被页脚遮挡。
+- **悬浮内容框（tooltip）**：磨砂玻璃底、portal 到页面顶层（永不被相邻卡片遮挡）、边缘自动避让、互斥防残留。
+- **表格**：行内单元格等高（分割线对齐）；移动端按内容宽度排布 + 横向滚动（MAC / MTU 等长列不再重叠）。
+- **接口 / 设备页**：接口图标统一 24px、强制不透明（连接状态由图标文件区分，不再半透误导）；GridSection 行内等高、操作按钮不换行；移动端接口小框左对齐、与其所在行卡片保持 4px 间隔。
+- **移动端适配**：弹出窗口 95% 宽、嵌套卡片逐层向内缩进（展示更大操作区）；抽屉菜单点击空白处关闭、首屏直接收起无闪烁；下拉靠近视口底部自动向上弹出、不被页脚遮挡。
+- **锁屏（登录页）**：macOS 风格玻璃登录卡片 + Monterey 壁纸（亮/暗）+ 可选 **Bing 每日壁纸**（每日自动抓取缓存）+ 内联 SVG 水滴 logo（跟随主题色 + 玻璃高光）。
+- **SVG 图标**：网络 / 接口状态图标取自 [xylz0928/luci-mod][luci-mod] `immortalwrt-24.10` 分支的 SVG 图标集；UI 元素图标（sun / moon / auto / refresh / lock / search / close / chevron）为内置 SVG。
+
+## 更新日志
+
+- **2026-08-08 · v0.3**：自定义主题色 + 颜色开关优化 + 移动端 / 暗色模式改进
+  - **自定义主题色**：5 套预置色之外新增自定义色——点击彩虹圆点下拉输入 hex 颜色编码（`#RRGGBB`），离开输入框即保存并全局生效；非法输入自动回退默认蓝（仍保持自定义模式启用）；经 uci 持久化，换设备保留
+  - **颜色开关**：外框统一 35px 高；自定义色选中时圆点内部显示自定义色、外圈彩虹渐变描边（一眼识别）；Bing 壁纸按钮方形描边贴合图标、启用时单层白色描边
+  - **移动端**：首屏不再闪现"菜单先展开再收缩"（禁用桌面入场动画干扰抽屉收起态，加载完成即可操作）；底部 foot 高度缩减
+  - **暗色模式**：模式开关图标（外链 svg）反色为浅色，深色背景下清晰可见
+  - **修复**：自定义色保存（controller 白名单支持 `accent=custom` / `accent_custom`）、登录页颜色开关定位、颜色区外框高度
+
+- **2026-08-08 · v0.2-r52**：移动端体验优化 + 下拉菜单优化
+  - **移动端接口页**：接口小框（ifacebox）与其所在行卡片左缘间隔优化为 4px，显示更整齐
+  - **移动端层叠卡片缩进**：弹出窗口宽 95%、嵌套卡片每层向内缩 2px，展示更大操作区
+  - **移动端菜单**：点击空白处退出菜单
+  - **桌面端弹出式层叠卡片**：显示效果优化（modal 80% 宽、嵌套卡片逐层限宽防溢出）
+  - **下拉菜单**：单选 / 多选交互与显示效果优化
+
+- **2026-08-07 · v0.2**：配置持久化（uci）+ Bing 每日壁纸 + 多项修复
+  - **配置持久化（uci）**：亮/暗/自动模式、5 套主题色、Bing 开关统一存入 `uci /etc/config/liquid`，换客户端（浏览器/设备）仍保留；改动经 LuCI RPC 直接提交，立即生效、无"待应用"提示
+  - **Bing 每日壁纸（锁屏）**：主题色前新增 Bing 开关按钮（字母 b logo）；启用后锁屏显示 Bing 当日壁纸（缓存于各设备 `/tmp/liquid/`）；无互联网或按钮关闭时自动回退默认壁纸（亮/暗各按模式）
+  - **锁屏只读**：登录页仅本地预览，不写入配置
+  - **uci 优先**：修复本地 localStorage 旧值覆盖 uci 新配置的问题，页面加载即应用路由器端配置
+  - **接口页修复**：未加入防火墙区域的接口 head 色条由白色改为灰色（亮色浅灰 / 暗色近黑），暗色下接口名不再不可见
+  - **CI**：GitHub Actions 双平台（x86 + MT798x）× 双格式（ipk / apk）自动构建发布
+  - 版本号 0.2-r1
+
+- **2026-08-07 · v0.1 首次发布**：全新 macOS 风格 Liquid Glass（液态玻璃）LuCI 主题，带来以下功能：
+  - **液态玻璃设计语言**：侧栏、内容卡片、登录页、页脚统一 frosted-glass（模糊 + 高光 + 主题色光晕），暗色下玻璃更实、文字更清晰
+  - **三态模式切换**：亮色 / 暗色 / 跟随系统，顶栏一键切换，`localStorage` 持久化、加载无闪烁
+  - **主题色**：5 套主题色（蓝 / 玫红 / 橙黄 / 郁金香紫 / 黄绿），菜单、按钮、Tab、logo 全链路联动
+  - **菜单**：默认全部折叠（点击一级菜单才展开二级）、hover 追踪滑块、选中玻璃胶囊、移动端滑出菜单
+  - **下拉控件**：一体化渐变胶囊（主体 + 分隔箭头，同"保存并应用"），视口边缘自动向上弹出、不被页脚遮挡
+  - **悬浮内容框（tooltip）**：磨砂玻璃底、顶层显示不被相邻卡片遮挡、边缘自动避让、互斥防残留
+  - **表格**：行内单元格等高（分割线对齐）、移动端按内容宽度 + 横向滚动（长列不重叠）
+  - **接口 / 设备页**：SVG 图标统一、连接状态由图标文件区分（不再半透误导）
+  - **锁屏（登录页）**：macOS 风格玻璃登录卡片 + Monterey 壁纸 + 主题色水滴 logo
+  - **兼容**：LuCI ≥ 23（OpenWrt 23.05 / 24.10 / master）
+
+## 兼容性
+
+支持基于 [OpenWrt 官方][official] 与 [ImmortalWrt][immortalwrt] 的现代 LuCI 环境（LuCI ≥ 23，OpenWrt 23.05 / 24.10 / master）。
+
+## 编译安装
+
+本包使用 LuCI feed 的 `luci.mk` 打包规则（`include $(TOPDIR)/feeds/luci/luci.mk`），因此编译环境需先 `./scripts/feeds update -a && ./scripts/feeds install -a`（含 luci feed）。
+
+把本目录放入 OpenWrt 源码树的 `package/luci-theme-liquid/`（或 `feeds/luci/themes/luci-theme-liquid/`），在 `.config` 中启用该包后编译：
+
+```bash
+cd openwrt/package
+git clone https://github.com/xylz0928/luci-theme-liquid.git
+make menuconfig   # 选择 LUCI → Themes → luci-theme-liquid
+make -j1 V=s
+```
+
+或直接编译单个包：
+
+```sh
+# 在 .config 中启用（任选其一）
+make menuconfig          # LuCI → Themes → luci-theme-liquid
+# 或
+echo 'CONFIG_PACKAGE_luci-theme-liquid=y' >> .config && make defconfig
+
+make package/luci-theme-liquid/compile -j4 V=s
+```
+
+> 注意：`make package/<name>/compile` 只对已在 `.config` 中启用（`=y`/`=m`）的包真正执行构建，未启用时 make 会空转（`Entering/Leaving` 无任何动作），不要误判为成功。
+
+生成的 `bin/packages/<arch>/base/luci-theme-liquid-0.3-r<rel>.apk`（或 `.ipk`）可通过 `apk` / `opkg` 安装：
+
+```sh
+apk add --allow-untrusted luci-theme-liquid-0.3-r1.apk
+```
+
+首次安装会自动注册主题（`luci.themes.Liquid=/luci-static/liquid`）；若 `luci.main.mediaurlbase` 尚未配置则自动设为该主题，否则请在 **System → Advanced → Theme** 中手动选择 **Liquid**。
+
+### 目录结构
+
+```
+luci-theme-liquid/
+├── Makefile                          # OpenWrt 包（luci feed 内/独立 package 目录均可编译）
+├── logo.svg                          # 主题 logo（水滴 + Liquid）
+├── htdocs/luci-static/liquid/        # 主题媒体资源（/luci-static/liquid/）
+│   ├── cascade.css                   # 全部样式（变量 / 菜单 / tab / cbi / dashboard / 锁屏）
+│   ├── main.js                       # 模式开关注入、下拉避让、tooltip portal 等
+│   ├── logo.svg / logo.png           # 主题 logo
+│   ├── img/                          # 锁屏壁纸（MontereyDark / MontereyLight）
+│   ├── icons/                        # 网络状态 SVG 图标（来自 luci-mod immortalwrt-24.10）
+│   └── svg/                          # UI 元素 SVG + dashboard 图标
+├── htdocs/luci-static/resources/     # 共享资源（/luci-static/resources/）
+│   ├── menu-liquid.js                # 左侧菜单 / tab 渲染（L.require('menu-liquid')）
+│   └── view/liquid/sysauth.js        # 锁屏登录视图（ui.showModal 'login'）
+├── ucode/template/themes/liquid/     # 主题 ucode 模板
+│   ├── header.ut / footer.ut         # 页面骨架（uci 配置读取 / 防闪烁 / Bing 壁纸缓存）
+│   └── sysauth.ut                    # 登录页模板（blank_page + 居中登录框）
+└── root/
+    ├── etc/uci-defaults/            # 安装时注册 luci.themes.Liquid
+    └── usr/share/ucode/luci/controller/liquid.uc   # 主题配置保存端点（/admin/system/liquid/save_config）
+```
+
+## 界面展示
+
+- 桌面端
+
+![桌面端-锁屏-暗黑模式](https://raw.githubusercontent.com/zzsj0928/ReadmeContents/master/liquid/luci-theme-liquid_pc-lock-dark.png)
+![桌面端-主界面-暗黑模式](https://raw.githubusercontent.com/zzsj0928/ReadmeContents/master/liquid/luci-theme-liquid_pc-mainpage-dark.png)
+![桌面端-锁屏-明亮模式](https://raw.githubusercontent.com/zzsj0928/ReadmeContents/master/liquid/luci-theme-liquid_pc-lock-light.png)
+![桌面端-主界面-明亮模式](https://raw.githubusercontent.com/zzsj0928/ReadmeContents/master/liquid/luci-theme-liquid_pc-mainpage-light.png)
+
+
+- 移动端
+
+![移动端-暗黑模式](https://raw.githubusercontent.com/zzsj0928/ReadmeContents/master/liquid/luci-theme-liquid_mobile-dark.jpg)
+![移动端-明亮模式](https://raw.githubusercontent.com/zzsj0928/ReadmeContents/master/liquid/luci-theme-liquid_mobile-light.jpg)
+
+## 致谢
+
+- 壁纸：macOS Monterey（Bright/Dark），来自 [xylz0928/luci-mod][luci-mod] `Background/`。
+- 网络状态 SVG 图标：来自 [xylz0928/luci-mod][luci-mod] `immortalwrt-24.10` 分支 `feeds/luci/modules/luci-base/htdocs/luci-static/resources/icons/`。
+- dashboard 模块图标（router / internet / wireless / devices）：来自 OpenWrt 官方 [luci-mod-dashboard](https://github.com/openwrt/luci/tree/master/modules/luci-mod-dashboard)。
+- 菜单渲染逻辑参考 [luci-theme-openwrt-2020](https://github.com/openwrt/luci/tree/master/themes/luci-theme-openwrt-2020)，锁屏视图参考 [luci-theme-bootstrap](https://github.com/openwrt/luci/tree/master/themes/luci-theme-bootstrap)（Apache-2.0）。
+
+## License
+
+Apache-2.0

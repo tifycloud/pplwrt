@@ -2,14 +2,16 @@ CompanyWrt notices and upstream license sources
 ================================================
 
 CompanyWrt-authored files in this repository, including the LuCI dashboard
-overlay, theme assets, build/verification scripts and configuration templates,
-are distributed under the repository MIT License unless a file says otherwise.
+overlay, build/verification scripts and configuration templates, are distributed
+under the repository MIT License unless a file says otherwise. The vendored
+Liquid theme is a separate upstream work and is not covered by that MIT grant.
 
 The firmware is assembled from official OpenWrt 25.12.5 binary packages. Those
 packages are separate upstream works and retain their own copyright/license
 terms. The generated package manifest and CycloneDX SBOM are the authoritative
 per-build inventory; APK metadata inside the image records package licenses.
-The build verifies one-to-one inventory coverage from all 251 resolved APK
+The AX9000 Darkyun RC5 build verifies one-to-one inventory coverage from all
+214 resolved APK
 package names to CycloneDX upstream components. This is not a claim that every
 license conclusion is complete: when OpenWrt omits a source component or
 license assertion (notably the libnghttp2-14 package in 25.12.5), the augmented
@@ -24,15 +26,20 @@ Key upstream source/license locations are:
   https://downloads.openwrt.org/releases/25.12.5/
 * LuCI and luci-proto-wireguard — Apache-2.0:
   https://github.com/openwrt/luci/blob/openwrt-25.12/LICENSE
+* luci-theme-liquid — pinned source commit
+  `ad0cce67c02ce9ce0154c2f08491fc8ac1daf06b`:
+  https://github.com/zzsj0928/luci-theme-liquid
+  The repository-level LICENSE says GPL-3.0 while its Makefile, README and
+  individual source headers say Apache-2.0. CompanyWrt preserves those notices
+  and conservatively declares the vendored APK and CompanyWrt patch component
+  GPL-3.0-only until upstream resolves the mismatch. The complete GPL-3.0 text
+  is installed at `/usr/share/licenses/luci-theme-liquid/LICENSE`.
 * pbr — AGPL-3.0-or-later (package metadata and source):
   https://github.com/openwrt/packages/blob/openwrt-25.12/net/pbr/Makefile
   https://github.com/mossdef-org/pbr/
 * WireGuard tools — GPL-2.0:
   https://github.com/openwrt/openwrt/blob/openwrt-25.12/package/network/utils/wireguard-tools/Makefile
   https://git.zx2c4.com/wireguard-tools/
-* collectd — MIT and GPL-2.0-or-later components:
-  https://github.com/openwrt/packages/blob/openwrt-25.12/utils/collectd/Makefile
-  https://github.com/collectd/collectd/
 * sqm-scripts (optional, not preinstalled) — GPL-2.0-only:
   https://github.com/openwrt/packages/blob/openwrt-25.12/net/sqm-scripts/Makefile
   https://github.com/tohojo/sqm-scripts
@@ -40,12 +47,12 @@ Key upstream source/license locations are:
   https://git.openwrt.org/project/usign.git
 
 OpenClash itself, its mihomo core, subscriptions and rule data are not included.
-Only dependencies available from the official OpenWrt feeds are selected; see
-docs/openclash.md for upstream links and the runtime installation boundary.
+Its runtime dependencies are also absent from the lean base and are resolved
+only during a separately reviewed installation; see docs/openclash.md.
 
-The package Makefiles under packages/ describe future SDK packages, but the
-current Buildroot pipeline does not compile or install them as APKs. Their
-`root/` trees are copied explicitly as named `*-overlay` components, are loaded
-by LuCI at runtime, and are represented in CUSTOM-COMPONENTS.manifest, the
-release manifest, NOTICE and augmented CycloneDX SBOM. This naming avoids a
-false claim that locally built APKs were produced.
+The pinned `packages/luci-theme-liquid` source is compiled as a real
+`luci-theme-liquid` APK by the fixed OpenWrt Buildroot and therefore appears in
+PACKAGE-MANIFEST and the upstream SBOM mapping. Its CompanyWrt-specific patch is
+also inventoried separately. `luci-app-company` and operational files continue
+to be copied as named `*-overlay` components and are explicitly represented in
+CUSTOM-COMPONENTS.manifest, the release manifest, NOTICE and augmented SBOM.

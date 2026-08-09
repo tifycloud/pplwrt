@@ -1,0 +1,34 @@
+#!/bin/sh
+
+changed=0
+
+if ! uci -q get "luci.themes.Liquid" 2>/dev/null; then
+	uci set "luci.themes.Liquid=/luci-static/liquid"
+	changed=1
+fi
+
+if [ "$PKG_UPGRADE" != 1 ] && [ $changed = 1 ]; then
+	if ! uci -q get "luci.main.mediaurlbase" 2>/dev/null; then
+		uci set "luci.main.mediaurlbase=/luci-static/liquid"
+	fi
+fi
+
+if [ $changed = 1 ]; then
+	uci commit luci
+fi
+
+# 主题持久化配置。企业基础版仅保留显示模式和主题色；不允许登录页
+# 主动访问外部壁纸服务。
+if ! uci -q get "liquid.theme" >/dev/null 2>&1; then
+	uci set "liquid.theme=theme"
+fi
+uci -q get "liquid.theme.mode" >/dev/null 2>&1 || uci -q set "liquid.theme.mode=auto"
+uci -q get "liquid.theme.accent" >/dev/null 2>&1 || uci -q set "liquid.theme.accent=custom"
+uci -q get "liquid.theme.accent_custom" >/dev/null 2>&1 || uci -q set "liquid.theme.accent_custom=#1f7a75"
+uci -q delete "liquid.theme.bing"
+uci commit liquid
+
+# 清除 LuCI 路由缓存，使主题立即出现在选择列表中。
+rm -f /tmp/luci-indexcache /tmp/luci-indexcache.* 2>/dev/null
+
+exit 0

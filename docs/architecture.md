@@ -7,9 +7,9 @@
    policies；生成器只输出 incremental staging plan，绝不整包 import/live apply。
 3. **企业基础能力**：WireGuard、logd 预装；collectd、SQM mobile 与 OpenClash runtime
    按需安装。PBR/OpenClash/手工 nft 必须单一 mark/table/chain owner。
-4. **overlay 管理层**：完整 CompanyWrt LuCI 主题、首次设置向导、脚本、模板与首启
-   HTTPS redirect。当前通过 FILES
-   overlay 安装并在 manifest/SBOM/NOTICE 标为 `overlay-not-apk`；Makefile 不等于 APK。
+4. **管理体验层**：固定上游 commit、经过安全收紧并品牌化的 Liquid 主题由 Buildroot 编译
+   为真实 APK；首次设置向导、CompanyWrt 应用、脚本、模板和 HTTPS 首启通过具名 FILES
+   overlay 安装。两种安装方式在 package manifest/SBOM/NOTICE 中明确区分。
 5. **发布信任层**：固定 Buildroot commit/feed/patch、FIT DTB 与 squashfs 内容检查、
    严格 usign manifest、SIZE/SHA、
    annotated tag=protected main、无密钥 Buildroot job、只验包/签名的 `firmware-signing`
@@ -20,6 +20,6 @@
 且 rootfs/cfg_bak 与已验证 MIBIB 一致。BDF 暂不修改，HE160 仍是独立实验项。
 
 dashboard 和 CI 只能证明配置/构建事实，不能证明真实 WAN、射频、secure boot 或救援。
-因此 company.2-rc4 明确 RC-only，stable 由生产 evidence 文件阻断。stable evidence 的
+因此 company.2-rc5 明确 RC-only，stable 由生产 evidence 文件阻断。stable evidence 的
 文件 SHA、opaque hardware/serial record IDs 与精确固件 SHA 同时进入签名 v2 manifest；
 RC 不能继承或硬编码 VERIFIED。

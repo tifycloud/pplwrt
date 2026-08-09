@@ -6,6 +6,7 @@ luci-i18n-base-zh-cn
 luci-i18n-pbr-zh-cn
 luci-theme-openwrt
 luci-theme-openwrt-2020
+luci-theme-liquid
 uhttpd-mod-ubus
 rpcd-mod-rrdns
 usign

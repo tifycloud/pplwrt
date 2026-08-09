@@ -2,7 +2,7 @@
   "luci-app-company": {
     "description": "CompanyWrt dashboard and guided first-run setup",
     "read": {
-      "uci": ["company", "network", "wireless", "luci", "firewall", "pbr"],
+      "uci": ["company", "network", "wireless", "luci", "liquid", "firewall", "pbr"],
       "ubus": {
         "system": ["board", "info"],
         "luci-rpc": ["getDHCPLeases"],
@@ -10,7 +10,7 @@
       }
     },
     "write": {
-      "uci": ["company", "network", "wireless", "luci"],
+      "uci": ["company", "network", "wireless", "luci", "liquid"],
       "ubus": {
         "luci": ["setPassword"]
       }

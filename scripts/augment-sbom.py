@@ -22,6 +22,11 @@ def parse_components(path: Path):
         if len(parts) != 5 or not all(parts):
             raise SystemExit(f"invalid custom component line: {raw}")
         name, version, license_id, install_method, source_path = parts
+        packaging_claim = (
+            "source-patch-compiled-into-apk"
+            if "compiled into" in install_method.lower()
+            else "overlay-not-apk"
+        )
         yield {
             "type": "application",
             "name": name,
@@ -31,7 +36,7 @@ def parse_components(path: Path):
             "properties": [
                 {"name": "companywrt:install-method", "value": install_method},
                 {"name": "companywrt:source-path", "value": source_path},
-                {"name": "companywrt:packaging-claim", "value": "overlay-not-apk"},
+                {"name": "companywrt:packaging-claim", "value": packaging_claim},
             ],
         }
 
