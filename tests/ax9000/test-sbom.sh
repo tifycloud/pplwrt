@@ -23,7 +23,7 @@ libnghttp2-14 - 1.66.0-r1
 EOF
 cat > "$TMP/CUSTOM-COMPONENTS.manifest" <<'EOF'
 company-test-overlay | 25.12.5-company.2-rc2 | MIT | overlay | tests/fixture
-company-test-apk-patch | 0.3.1-r1 | GPL-3.0-only | Source patch compiled into luci-theme-liquid APK | tests/theme
+company-test-apk-patch | 0.3.1-r3 | GPL-3.0-only | Source patch compiled into luci-theme-liquid APK | tests/theme
 EOF
 
 python3 "$ROOT/scripts/augment-sbom.py" \

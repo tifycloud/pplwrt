@@ -3,6 +3,7 @@ set -eu
 ROOT=$(CDPATH='' cd -- "$(dirname "$0")/../.." && pwd)
 DASHBOARD="$ROOT/packages/luci-app-company/root/www/luci-static/resources/view/company/dashboard.js"
 SETUP="$ROOT/packages/luci-app-company/root/www/luci-static/resources/view/company/setup.js"
+SETUP_RENDER_TEST="$ROOT/tests/ax9000/setup-render.test.js"
 THEME="$ROOT/packages/luci-theme-liquid/htdocs/luci-static/liquid/cascade.css"
 THEME_JS="$ROOT/packages/luci-theme-liquid/htdocs/luci-static/liquid/main.js"
 HEADER="$ROOT/packages/luci-theme-liquid/ucode/template/themes/liquid/header.ut"
@@ -15,22 +16,32 @@ UPSTREAM="$ROOT/packages/luci-theme-liquid/UPSTREAM.md"
 MENU="$ROOT/packages/luci-app-company/root/usr/share/luci/menu.d/luci-app-company.json"
 ACL="$ROOT/packages/luci-app-company/root/usr/share/rpcd/acl.d/luci-app-company.json"
 
-for file in "$DASHBOARD" "$SETUP" "$THEME" "$THEME_JS" "$HEADER" "$FOOTER" "$SYSAUTH" \
+for file in "$DASHBOARD" "$SETUP" "$SETUP_RENDER_TEST" "$THEME" "$THEME_JS" "$HEADER" "$FOOTER" "$SYSAUTH" \
 	"$THEME_ACL" "$THEME_DEFAULTS" "$THEME_RPC" "$UPSTREAM" "$MENU" "$ACL"; do
 	[ -s "$file" ] || { echo "missing Liquid/CompanyWrt UI file: $file" >&2; exit 1; }
 done
 
-for marker in 'memory.available' 'getDHCPLeases' '设置宽带账号' '重新运行设置向导' 'OpenClash.*未预装' 'network.interface' '胖胖龙专用路由器'; do
+node "$SETUP_RENDER_TEST" "$SETUP"
+
+for marker in 'memory.available' 'getDHCPLeases' '宽带与首次设置' '设置宽带和 Wi' 'OpenClash.*未预装' 'network.interface' '胖胖龙专用路由器'; do
 	grep -Eq "$marker" "$DASHBOARD"
 done
 for marker in 'setPassword' "uci.set('network', 'wan', 'proto'" 'cw-pppoe-user' 'cw-pppoe-pass' 'sae-mixed' "setup_complete', '1'" '管理员密码至少需要 10 个字符' '胖胖龙专用路由器'; do
 	grep -Fq "$marker" "$SETUP"
 done
-for marker in '@media screen and (max-width: 854px)' 'prefers-reduced-motion' '.cw-wizard' '.cw-grid' '#mainmenu' '#maincontent' '.ppl-brand'; do
+for marker in '@media screen and (max-width: 854px)' 'prefers-reduced-motion' '.cw-wizard' '.cw-grid' '#mainmenu' '#maincontent' '.ppl-brand' '.cw-console-head' '.cw-memory-strip' '.cbi-progressbar::after' 'content: attr(title)'; do
 	grep -Fq "$marker" "$THEME"
+done
+for marker in 'availablePercent' 'usedPercent' '实际占用' '可用内存' '按 MemAvailable 计算' '宽带与首次设置'; do
+	grep -Fq "$marker" "$DASHBOARD"
 done
 for marker in '胖胖龙专用路由器' 'data-liquid-mode' 'data-liquid-accent' 'cascade.css'; do
 	grep -Fq "$marker" "$HEADER"
+done
+grep -Fq "let cfg_mode = 'dark'" "$HEADER"
+grep -Fq 'liquid.theme.mode=dark' "$THEME_DEFAULTS"
+for marker in '--background-color-high: #0b1110' '--menu-bg: rgba(7, 15, 14, 0.82)' 'linear-gradient(160deg, #08100f 0%, #060b0a 52%, #030706 100%)'; do
+	grep -Fq -- "$marker" "$THEME"
 done
 grep -Fq '胖胖龙专用路由器' "$FOOTER"
 grep -Fq "include('header', { blank_page: true })" "$SYSAUTH"

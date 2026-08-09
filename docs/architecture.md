@@ -20,6 +20,6 @@
 且 rootfs/cfg_bak 与已验证 MIBIB 一致。BDF 暂不修改，HE160 仍是独立实验项。
 
 dashboard 和 CI 只能证明配置/构建事实，不能证明真实 WAN、射频、secure boot 或救援。
-因此 company.2-rc5 明确 RC-only，stable 由生产 evidence 文件阻断。stable evidence 的
+因此 company.2-rc6 明确 RC-only，stable 由生产 evidence 文件阻断。stable evidence 的
 文件 SHA、opaque hardware/serial record IDs 与精确固件 SHA 同时进入签名 v2 manifest；
 RC 不能继承或硬编码 VERIFIED。

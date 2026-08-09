@@ -1,5 +1,26 @@
 # Changelog
 
+## 25.12.5-company.2-rc6 — 2026-08-09
+
+**Release candidate / NOT PRODUCTION.** RC5 真机首次设置反馈暴露了一个阻断型 LuCI DOM
+渲染错误和两个直接体验问题，RC6 专门修复，不把 RC5 宣称为可继续验收的候选。
+
+- 根因是 `setup.js` 把 `content` 元素数组作为 `dom.content()` 顶层数组的一个成员；LuCI
+  官方 `dom.append()` 不递归展开嵌套数组，而是把它转为字符串，真机因此显示
+  `[object HTMLLabelElement],[object HTMLParagraphElement]`。新增执行真实 view 源码并复刻
+  LuCI DOM 追加规则的 Node 回归测试，修复前稳定失败、修复后通过。
+- 删除阻断流程的“确认有线”复选框，把 PPPoE/DHCP 直接放到第一屏；向导收敛为宽带、
+  Wi-Fi、管理密码三步，安全提醒只提示、不再拦截。控制中心继续提供可重复进入的宽带入口。
+- 所有 LuCI 原生 memory/storage progressbar 把 `title` 中的字节数与百分比直接印在条形图
+  上，触摸屏和键盘不再依赖 hover。
+- 控制中心改为更紧凑的操作台布局，直接展示 WAN、`MemAvailable`、实际占用、总量、
+  1 分钟负载和终端数，并解释 OpenWrt 传统“已用”会把文件缓存计入。
+- 新安装默认使用深青灰底色和克制的青绿色强调；亮色、深色和跟随系统模式仍可从顶栏
+  随时切换。Liquid APK 升为 `0.3.1-r3` 以强制 CSS/JS 缓存版本变化；包集合仍固定
+  214 个，OpenClash、Mihomo、collectd、Ruby、TUN/TProxy 和 SQM 继续不预装。
+- 68% 的真机反馈来自原生状态页传统 `Used = total - free` 口径，不能单独证明内存泄漏；
+  生产判断仍要求冷启动 10 分钟后的 `memory-report --check-idle` 原始输出和 24 小时复测。
+
 ## 25.12.5-company.2-rc5 — 2026-08-09
 
 **Release candidate / NOT PRODUCTION.** RC4 在签名和发布前取消；没有 RC4 Release 或可刷

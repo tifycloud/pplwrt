@@ -1,7 +1,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=luci-app-company
-PKG_VERSION:=25.12.5-company.2-rc5
+PKG_VERSION:=25.12.5-company.2-rc6
 PKG_RELEASE:=1
 PKG_MAINTAINER:=CompanyWrt contributors
 PKG_LICENSE:=MIT

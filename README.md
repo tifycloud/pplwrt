@@ -3,7 +3,7 @@
 CompanyWrt 是基于官方 OpenWrt **25.12.5**、`qualcommax/ipq807x` 的可审计企业固件。
 本仓库当前唯一可构建目标是为用户实机验证的暗云 Boot 单 UBI 大分区新建的
 `xiaomi_ax9000_darkyun` profile；它不是官方标准 `xiaomi_ax9000` 镜像。当前版本是
-**25.12.5-company.2-rc5**：它是 release candidate，**不是生产稳定版**。
+**25.12.5-company.2-rc6**：它是 release candidate，**不是生产稳定版**。
 在真实 AX9000 完成刷写/救援/断电/双 WAN/无线/安全门禁前只能用于实验室。
 
 > 官方标准 AX9000 镜像和历史 `company.1/company.2-rc1` 都与本机单 UBI 布局不兼容，
@@ -25,8 +25,8 @@ secret；详见 [密钥说明](keys/README.md)。
 ./scripts/build-in-container.sh --profile xiaomi_ax9000_darkyun --channel rc --compile-only
 export USIGN_SECRET_KEY_FILE=/secure/outside/repository/companywrt-usign-current.key
 ./scripts/sign-release-bundle.sh \
-  --input artifacts/preflight/25.12.5-company.2-rc5 --channel rc
-cd artifacts/rc/25.12.5-company.2-rc5
+  --input artifacts/preflight/25.12.5-company.2-rc6 --channel rc
+cd artifacts/rc/25.12.5-company.2-rc6
 sha256sum -c SHA256SUMS
 ```
 
@@ -36,7 +36,7 @@ sha256sum -c SHA256SUMS
 `origin/main` HEAD 精确相等；完整 Buildroot 在无 secret job 中完成并封存 checksum，
 `firmware-signing` job 只验包和签名、不运行编译器或网络下载。attestation 与唯一
 contents-write publish job 继续分离。RC tag 自动发布 immutable prerelease。正式 stable 没有
-精确真机 evidence 文件就会失败，RC5 没有真机证据，不能当 stable。
+精确真机 evidence 文件就会失败，RC6 没有真机证据，不能当 stable。
 
 ## 默认边界
 
@@ -45,7 +45,8 @@ contents-write publish job 继续分离。RC tag 自动发布 immutable prerelea
 - 固定上游 commit 的 `luci-theme-liquid` 作为完整 LuCI 默认主题，并在安全审计后移除外部
   Bing 壁纸下载和直接写配置 controller；首次向导配置管理员密码、主 WAN DHCP/PPPoE
   和 Wi-Fi，官方 OpenWrt2020 主题始终保留作救援入口。
-- 首页用 `MemAvailable` 显示真实可用内存并提供宽带/Wi-Fi/双 WAN/备份快捷入口；
+- 首页直接显示 `MemAvailable`、实际占用、总量、负载和终端数；所有 LuCI 用量条也直接
+  显示数字，不需要鼠标悬停。首页同时提供宽带/Wi-Fi/双 WAN/备份快捷入口；
   “已启用”仍不等于真机验收。
 - WireGuard 与 logd 基础预装；collectd、SQM 和 OpenClash runtime 均按需安装，避免空载
   常驻服务和不必要依赖。密钥、collector、VLAN 与租户配置不入镜像。

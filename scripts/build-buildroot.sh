@@ -154,7 +154,7 @@ awk -F'|' -v expected="$VERSION" '
 		gsub(/^[[:space:]]+|[[:space:]]+$/, "", name)
 		gsub(/^[[:space:]]+|[[:space:]]+$/, "", version)
 		if (name == "luci-theme-liquid-company-patch") {
-			if (version != "0.3.1-r1") exit 1
+			if (version != "0.3.1-r3") exit 1
 		}
 		else if (version != expected) exit 1
 	}

@@ -22,7 +22,7 @@ fi
 if ! uci -q get "liquid.theme" >/dev/null 2>&1; then
 	uci set "liquid.theme=theme"
 fi
-uci -q get "liquid.theme.mode" >/dev/null 2>&1 || uci -q set "liquid.theme.mode=auto"
+uci -q get "liquid.theme.mode" >/dev/null 2>&1 || uci -q set "liquid.theme.mode=dark"
 uci -q get "liquid.theme.accent" >/dev/null 2>&1 || uci -q set "liquid.theme.accent=custom"
 uci -q get "liquid.theme.accent_custom" >/dev/null 2>&1 || uci -q set "liquid.theme.accent_custom=#1f7a75"
 uci -q delete "liquid.theme.bing"

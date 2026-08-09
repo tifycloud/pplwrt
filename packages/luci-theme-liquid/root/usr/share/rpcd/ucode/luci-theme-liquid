@@ -8,7 +8,7 @@ import { cursor } from 'uci';
 const methods = {
 	setPreferences: {
 		args: {
-			mode: 'auto',
+			mode: 'dark',
 			accent: 'custom',
 			accent_custom: '#1f7a75'
 		},
