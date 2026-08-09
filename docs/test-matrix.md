@@ -20,8 +20,9 @@ ID，不能是原始设备序列号。模板/占位符/缺项会被 CI 拒绝；
 | VLAN | 模板/包边界 | DSA trunk/access/隔离/管理可达/回滚 |
 | WireGuard | kmod/tools/LuCI 进入 manifest/rootfs | handshake、AllowedIPs/MTU/PBR/密钥恢复 |
 | PBR | 源/域名/IP/端口 plan 与默认 unicom | nft/ip rule/table 命中、冲突/故障/连接保持 |
-| OpenClash | 仅依赖、本体不在 SBOM | 安装来源、TUN/tproxy 单所有者、DNS、停用恢复 |
-| 日志/监控 | logd/collectd 基础；plugin/init 默认禁用且无 endpoint | 脱敏、隔离/WG transport、保留/告警/带宽 |
+| OpenClash | 本体与专用 runtime 依赖不在基础 SBOM | 安装来源、TUN/tproxy 单所有者、DNS、停用恢复 |
+| 日志/监控 | logd + MemAvailable/RSS 诊断；collectd 不预装 | 脱敏、隔离/WG transport、保留/告警/带宽 |
+| 空载内存 | `memory-report` 与 rootfs 负向检查 | 冷启动 10 分钟、无客户端/附加插件时 `memory-report --check-idle` PASS：MemAvailable ≥ 70%；持续 24 小时后下降不超过总内存 5% |
 | SQM | mobile 可选模板；base 不含 | mobile CPU/吞吐/延迟；unicom 默认关闭 |
 | OTA | usign/HTTPS/SIZE/SHA/board/双确认/`-T` | 备份、slot、升级/配置恢复/失败救援 |
 

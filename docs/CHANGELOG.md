@@ -1,5 +1,22 @@
 # Changelog
 
+## 25.12.5-company.2-rc4 — 2026-08-09
+
+**Release candidate / NOT PRODUCTION.** 本轮针对首次刷写后的直接用户反馈重做产品体验与
+空载基线，不继承 RC3 的界面或“安装后再禁用”监控方案。
+
+- `luci-theme-company` 从单页 CSS 升级为完整 LuCI 主题，统一导航、表单、表格、状态、
+  移动端和键盘焦点；OpenWrt2020 仍作为救援主题保留。
+- 新增首次设置向导：有线确认、主 WAN DHCP/PPPoE、宽带账号/密码、三射频 Wi-Fi、
+  WPA2/WPA3 密码与 root 管理密码。敏感字段只提交到设备 UCI/passwd，不进入镜像或 Git。
+- 日常首页改为联网、终端、真实可用内存和四个常用任务；高级门禁信息移回运维文档。
+- 内存口径改用内核 `MemAvailable`，新增只读 `memory-report`，列出可回收缓存与最大 RSS
+  进程，避免把 page cache 误报为应用常驻占用。
+- 从基础镜像删除 collectd 及其插件、Ruby/Ruby-YAML、Lua compatibility runtime、bash、
+  unzip、TUN/tproxy 等 39 个 package selections；OpenClash 安装时再解析完整依赖。
+- 基础 manifest 从 252 个包收敛为固定 213 个包；collectd 不再依靠首启脚本删除
+  `S80collectd`，而是完全不进入 rootfs。
+
 ## 25.12.5-company.2-rc3 — 2026-08-09
 
 **Release candidate / NOT PRODUCTION.** 基础固件继续不预装 OpenClash、Mihomo、订阅或

@@ -31,7 +31,10 @@ if "$ROOT/scripts/build-buildroot.sh" --channel stable --print-output > /dev/nul
 fi
 grep -Fq 'OpenWrt source checkout failed after 3 attempts' "$ROOT/scripts/build-buildroot.sh"
 grep -Fq 'refusing full Buildroot compilation as root' "$ROOT/scripts/build-buildroot.sh"
-grep -Fq "printf '# CONFIG_RUBY_ENABLE_YJIT is not set\\n'" "$ROOT/scripts/build-buildroot.sh"
+if grep -Eq '^ruby($|-)|^libruby$' "$ROOT/configs/ax9000/packages.txt"; then
+	echo 'lean base still selects Ruby runtime packages' >&2
+	exit 1
+fi
 grep -Fq 'setpriv --reuid=10001 --regid=10001 --clear-groups' "$ROOT/scripts/build-in-container.sh"
 if grep -q 'FORCE_UNSAFE_CONFIGURE' "$ROOT/scripts/build-buildroot.sh" "$ROOT/scripts/build-in-container.sh"; then
 	echo 'container bypasses an upstream root-build safety check' >&2

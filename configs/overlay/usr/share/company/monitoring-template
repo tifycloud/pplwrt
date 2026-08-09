@@ -1,8 +1,6 @@
-# REVIEW TEMPLATE — collectd is installed, all plugins are disabled, and its
-# init service is disabled on first boot. Enable only the approved
-# CPU/load/memory/interface/uptime plugins and point
-# collectd-mod-network at a collector reachable through the management VLAN or
-# WireGuard. Do not expose a collector listener on WAN. Record retention,
-# authentication and bandwidth impact in the production evidence file.
-# Explicitly run `/etc/init.d/collectd enable` only after reviewing `uci changes
-# collectd`; never add a `network_listen` section on a WAN address.
+# OPTIONAL MONITORING TEMPLATE — collectd is intentionally absent from the lean
+# base image. Built-in LuCI/ubus status and `/usr/share/company/memory-report`
+# cover first-line diagnosis without a resident collector.
+#
+# After management VLAN/WireGuard enrollment, install only the approved core
+# and plugins, point them at an authenticated collector, and never listen on WAN.

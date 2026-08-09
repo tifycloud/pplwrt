@@ -10,7 +10,7 @@ MIT LICENSE、内容报告和 GitHub artifact attestation。
 
 ```text
 FORMAT=companywrt-darkyun-release-v1
-VERSION=25.12.5-company.2-rc3
+VERSION=25.12.5-company.2-rc4
 OPENWRT_RELEASE=25.12.5
 PROFILE=xiaomi_ax9000_darkyun
 BOARD=xiaomi,ax9000-darkyun
@@ -19,7 +19,7 @@ MIBIB_SHA256=2d79c1b15b8946af733dba5fff5e33bf3ba18863ed734710bd2a5e48fc469c11
 APPSBL_SHA256=80908e502add45ee6aa7ad83aa16ec2c3c8bf27b572ac0f9c3fe404b94fc0007
 MIGRATION_BOARD=xiaomi,ax9000
 CHANNEL=rc
-TAG=v25.12.5-company.2-rc3
+TAG=v25.12.5-company.2-rc4
 SOURCE_COMMIT=<40-lowercase-hex>
 IMAGE=<safe-sysupgrade-basename>
 SHA256=<64-lowercase-hex>
@@ -48,15 +48,15 @@ RC/beta 不允许伪造这些 stable 字段，其 BUILD-METADATA 与内容报告
 version/profile/board/partition/MIBIB/APPSBL/channel/tag/commit/image/size/SHA/URL 绑定为一个整体。
 RC2 是已完成的轮换例外：`RELEASE-MANIFEST.sig` 仍由 RC1 旧 key 主签，
 `RELEASE-MANIFEST.next.sig` 由新 key 对同一字节共签，RC2 rootfs 只嵌入新 key。这样
-RC1 无需信任锚 override 即可验证过渡；当前 RC3 由新 key 对
+RC1 无需信任锚 override 即可验证过渡；当前 RC3 及后续版本由新 key 对
 `RELEASE-MANIFEST.sig` 主签，不再生成 `.next.sig`。
 
 ## 下载检查（不改变路由器状态）
 
 ```sh
 /usr/share/company/ota-check \
-  --manifest https://github.com/tifycloud/pplwrt/releases/download/v25.12.5-company.2-rc3/RELEASE-MANIFEST \
-  --version 25.12.5-company.2-rc3 --channel rc
+  --manifest https://github.com/tifycloud/pplwrt/releases/download/v25.12.5-company.2-rc4/RELEASE-MANIFEST \
+  --version 25.12.5-company.2-rc4 --channel rc
 ```
 
 它必须实际下载 signature 和完整 image，然后按顺序验证 schema、key fingerprint、
@@ -72,9 +72,9 @@ usign signature、实际字节数和 SHA256。短 SHA、仅打印 manifest SHA�
   --manifest /tmp/bundle/RELEASE-MANIFEST \
   --signature /tmp/bundle/RELEASE-MANIFEST.sig \
   --image /tmp/bundle/<sysupgrade.bin> \
-  --expected-version 25.12.5-company.2-rc3 \
+  --expected-version 25.12.5-company.2-rc4 \
   --expected-channel rc \
-  --confirm-version 25.12.5-company.2-rc3 \
+  --confirm-version 25.12.5-company.2-rc4 \
   --confirm-sha256 <64HEX_FROM_SEPARATE_ADMIN_REVIEW>
 ```
 

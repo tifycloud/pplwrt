@@ -1,39 +1,44 @@
 #!/bin/sh
 set -eu
-ROOT=$(cd -P -- "$(dirname "$0")/../.." && pwd)
-VIEW="$ROOT/packages/luci-app-company/root/usr/lib/lua/luci/view/company/dashboard.htm"
-CSS="$ROOT/packages/luci-theme-company/root/www/luci-static/company/css/company.css"
-for marker in company-kpis company-flow company-admin-strip company-pill company-footer company-skip-link; do
-  grep -q "$marker" "$VIEW"
+ROOT=$(CDPATH='' cd -- "$(dirname "$0")/../.." && pwd)
+DASHBOARD="$ROOT/packages/luci-app-company/root/www/luci-static/resources/view/company/dashboard.js"
+SETUP="$ROOT/packages/luci-app-company/root/www/luci-static/resources/view/company/setup.js"
+THEME="$ROOT/packages/luci-theme-company/root/www/luci-static/company/cascade.css"
+HEADER="$ROOT/packages/luci-theme-company/root/usr/share/ucode/luci/template/themes/company/header.ut"
+MENU="$ROOT/packages/luci-app-company/root/usr/share/luci/menu.d/luci-app-company.json"
+ACL="$ROOT/packages/luci-app-company/root/usr/share/rpcd/acl.d/luci-app-company.json"
+
+for file in "$DASHBOARD" "$SETUP" "$THEME" "$HEADER" "$MENU" "$ACL"; do
+	[ -s "$file" ] || { echo "missing CompanyWrt UI file: $file" >&2; exit 1; }
 done
-for marker in '@media (max-width: 780px)' 'prefers-reduced-motion' 'prefers-color-scheme: dark' '.company-card-wide'; do
-  grep -q "$marker" "$CSS"
+
+for marker in 'memory.available' 'getDHCPLeases' '设置宽带账号' '重新运行设置向导' 'OpenClash.*未预装' 'network.interface'; do
+	grep -Eq "$marker" "$DASHBOARD"
 done
-grep -q 'luci-static/company/css/company.css' "$VIEW"
-grep -q '<main id="company-content"' "$VIEW"
-grep -q 'HE160' "$VIEW"
-grep -q 'uci:foreach("firewall", "zone"' "$VIEW"
-grep -q 'uci:get("pbr", "config", "enabled")' "$VIEW"
-grep -q 'uhttpd.*redirect_https' "$VIEW"
-grep -q '候选配置 · 未验收' "$VIEW"
-grep -q '仅从 UCI 读取' "$VIEW"
-grep -q '本体未安装' "$VIEW"
-if grep -q "url('admin','services','openclash')" "$VIEW"; then
-	echo 'dashboard exposes a dead OpenClash route although the base image does not install it' >&2
+for marker in 'setPassword' "uci.set('network', 'wan', 'proto'" 'cw-pppoe-user' 'cw-pppoe-pass' 'sae-mixed' "setup_complete', '1'" '管理员密码至少需要 10 个字符'; do
+	grep -Fq "$marker" "$SETUP"
+done
+for marker in '@media (max-width: 900px)' 'prefers-reduced-motion' '.cw-wizard' '.cw-grid' '.cw-password-warning' '#mainmenu' '#maincontent'; do
+	grep -Fq "$marker" "$THEME"
+done
+grep -Fq "@import url('/luci-static/openwrt2020/cascade.css')" "$THEME"
+grep -Fq 'CompanyWrt 企业路由器管理中心' "$HEADER"
+grep -Fq 'themes/company' "$ROOT/packages/luci-theme-company/Makefile"
+grep -Fq 'luci-static/company' "$ROOT/packages/luci-theme-company/root/etc/uci-defaults/30_luci-theme-company"
+grep -Fq '"path": "company/setup"' "$MENU"
+grep -Fq '"luci": ["setPassword"]' "$ACL"
+grep -Fq '"uci": ["company", "network", "wireless", "luci"]' "$ACL"
+
+if grep -Fq '+luci-compat' "$ROOT/packages/luci-app-company/Makefile"; then
+	echo 'modern CompanyWrt app must not require the legacy LuCI compatibility runtime' >&2
 	exit 1
 fi
-grep -Fq '+luci-compat' "$ROOT/packages/luci-app-company/Makefile"
-grep -Fq '/usr/lib/lua/luci/view/company' "$ROOT/packages/luci-app-company/Makefile"
-if find "$ROOT/packages/luci-app-company/root/usr/share/lua" -type f -print -quit 2>/dev/null | grep -q .; then
-	echo 'LuCI overlay still contains files in the non-runtime /usr/share/lua path' >&2
+if find "$ROOT/packages/luci-app-company/root/usr/lib/lua" -type f -print -quit 2>/dev/null | grep -q .; then
+	echo 'legacy Lua view remains in CompanyWrt app' >&2
 	exit 1
 fi
-[ ! -e "$ROOT/packages/luci-app-company/root/etc/init.d/company" ]
-for false_claim in '设备健康' '可管理' '有线管理面已就绪' 'PBR 已就绪' '基线通过' '稳定基线'; do
-  if grep -Fq "$false_claim" "$VIEW"; then
-    echo "static readiness claim remains in dashboard: $false_claim" >&2
-    exit 1
-  fi
-done
-grep -q 'company-pill-neutral' "$CSS"
-echo 'CompanyWrt UI dynamic configuration snapshot and unverified-state markers: ok'
+if grep -Eq '设备健康|基线通过|PBR 已就绪' "$DASHBOARD"; then
+	echo 'dashboard contains an unverified readiness claim' >&2
+	exit 1
+fi
+echo 'CompanyWrt full theme, reclaim-aware dashboard and guided PPPoE/Wi-Fi/password setup: ok'

@@ -1,12 +1,12 @@
 # Roadmap
 
-## 当前：25.12.5-company.2-rc3（仅 RC）
+## 当前：25.12.5-company.2-rc4（仅 RC）
 
 - 固定官方 OpenWrt/feeds/patch；暗云单 UBI profile、FIT DTB/squashfs 内容检查。
-- plan-only 双 WAN/PBR；严格 signed OTA；安全首启/preflight；动态只读 UI。
-- WireGuard/logd/collectd 基础、mobile SQM 可选模板、overlay SBOM/NOTICE。
+- plan-only 双 WAN/PBR；严格 signed OTA；安全首启/preflight；完整 LuCI 主题和首次向导。
+- WireGuard/logd 基础、MemAvailable/RSS 诊断；collectd/OpenClash runtime/mobile SQM 按需。
 - exact-main annotated tag、受保护签名 environment、immutable release/attestation、RC
-  prerelease/stable production gate；RC2 完成旧→新 usign 过渡，RC3 仅用当前 key 主签。
+  prerelease/stable production gate；RC2 完成旧→新 usign 过渡，RC3+ 仅用当前 key 主签。
 
 ## 进入 stable 前（全部需要真实 AX9000）
 

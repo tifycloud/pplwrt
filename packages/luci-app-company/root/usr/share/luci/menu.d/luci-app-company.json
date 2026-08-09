@@ -3,8 +3,19 @@
     "title": "CompanyWrt",
     "order": 5,
     "action": {
-      "type": "template",
+      "type": "view",
       "path": "company/dashboard"
+    },
+    "depends": {
+      "acl": ["luci-app-company"]
+    }
+  },
+  "admin/company/setup": {
+    "title": "首次设置",
+    "order": 1,
+    "action": {
+      "type": "view",
+      "path": "company/setup"
     },
     "depends": {
       "acl": ["luci-app-company"]

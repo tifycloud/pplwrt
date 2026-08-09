@@ -6,8 +6,8 @@
 - 镜像不嵌入默认密码。首次登录立即设置密码管理器生成的唯一 root 密码。
 - release inspector 会实际读取解包 rootfs 的 `/etc/shadow` root 字段；只允许明确的
   `EMPTY` 或 `LOCKED` 初始状态，任意预置 hash 都令构建失败，报告只写状态不写 hash。
-- 首启只设置 hostname/中文/官方 openwrt2020 救援主题和 HTTP→HTTPS redirect；
-  不猜 DSA/WAN、不改 firewall/network、不放宽 WAN 入站。
+- 首启只设置 hostname/中文/CompanyWrt 默认主题和 HTTP→HTTPS redirect；首次向导在有线
+  管理员明确输入后才配置主 WAN、Wi-Fi 与密码。OpenWrt2020 仍是救援主题。
 - 运行 `/usr/share/company/enrollment-preflight --expected-version ...`。board、target、
   profile/version/channel、root 密码状态、HTTPS、WAN REJECT/DROP、时钟或空间任一失败
   都不能入网。脚本只读且绝不打印密码 hash。
@@ -26,9 +26,8 @@ SSH 应使用受管公钥并限制管理网段；密码登录策略、host key �
 ## 日志、监控、VPN 与 SQM
 
 - `logd` 可远程 syslog，但明文 syslog 只允许隔离管理 VLAN/WireGuard；模板默认不启用。
-- collectd 与最小 CPU/load/memory/interface/network/uptime modules 预装，但全部 plugin
-  默认禁用，首启还会禁用 init service；无 collector/server/listener。配置前评审认证、
-  保留期、隐私和带宽，只能经管理 VLAN/WireGuard 启用。
+- collectd 不进入基础镜像；内置 LuCI/ubus 与只读 `memory-report` 负责首线诊断。需要历史
+  指标时再安装经过审阅的 collector/plugin，并经管理 VLAN/WireGuard 传输。
 - WireGuard tools/LuCI protocol 预装，peer/AllowedIPs/私钥必须设备本地创建并与 PBR 联审。
 - SQM 因 25.12.5 依赖会增加 iptables compatibility，不进基础镜像。只在 mobile 实测后
   按模板安装；unicom 默认禁用，除非独立 CPU/1G throughput 证据通过。

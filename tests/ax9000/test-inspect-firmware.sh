@@ -66,7 +66,6 @@ etc/companywrt/build.conf
 etc/companywrt/device-layout.json
 etc/companywrt/keys/release.pub
 etc/shadow
-etc/config/collectd
 etc/config/firewall
 etc/board.d/02_network
 bin/config_generate
@@ -77,12 +76,17 @@ usr/share/company/ota-check
 usr/share/company/ota-apply
 usr/share/company/enrollment-preflight
 usr/share/company/ax9000-darkyun-preflight
+usr/share/company/memory-report
 usr/share/company/LICENSE
 usr/share/company/NOTICE
 usr/share/company/CUSTOM-COMPONENTS.manifest
 usr/share/company/sqm-mobile-template
-usr/lib/lua/luci/view/company/dashboard.htm
-www/luci-static/company/css/company.css'
+www/luci-static/resources/view/company/dashboard.js
+www/luci-static/resources/view/company/setup.js
+www/luci-static/company/cascade.css
+www/luci-static/company/logo.svg
+usr/share/ucode/luci/template/themes/company/header.ut
+usr/share/ucode/luci/template/themes/company/footer.ut'
 printf '%s\n' "$required_paths" | while IFS= read -r path; do
 	mkdir -p "$FIXTURE_ROOT/$(dirname "$path")"
 	: > "$FIXTURE_ROOT/$path"
@@ -105,11 +109,7 @@ daemon:*:20000:0:99999:7:::
 EOF
 cat > "$FIXTURE_ROOT/etc/uci-defaults/99-companywrt" <<'EOF'
 uci set uhttpd.main.redirect_https='1'
-/etc/init.d/collectd disable
-EOF
-cat > "$FIXTURE_ROOT/etc/config/collectd" <<'EOF'
-config globals 'globals'
-	option enable '0'
+uci set luci.main.mediaurlbase='/luci-static/company'
 EOF
 cat > "$FIXTURE_ROOT/etc/config/firewall" <<'EOF'
 config zone
@@ -141,9 +141,11 @@ set network.@device[-1].type='bridge'
 EOF
 
 cat > "$TMP/PACKAGE-MANIFEST" <<'EOF'
-collectd - 1-r1
-collectd-mod-network - 1-r1
+ca-bundle - 1-r1
+curl - 1-r1
+dnsmasq-full - 1-r1
 firewall4 - 1-r1
+ip-full - 1-r1
 jsonfilter - 1-r1
 kmod-wireguard - 1-r1
 logd - 1-r1
@@ -172,6 +174,8 @@ grep -qx 'partition_variant=darkyun-large-ubi-v1' "$TMP/locked.report"
 grep -qx 'kernel_dtb_layout=PASS' "$TMP/locked.report"
 grep -qx 'openclash_preinstalled=NO' "$TMP/locked.report"
 grep -qx 'mihomo_preinstalled=NO' "$TMP/locked.report"
+grep -qx 'collectd_preinstalled=NO' "$TMP/locked.report"
+grep -qx 'memory_metric=MEMAVAILABLE' "$TMP/locked.report"
 
 printf 'luci-app-openclash - 0.47.0-r1\n' >> "$TMP/PACKAGE-MANIFEST"
 if PATH="$MOCK:$PATH" UNSQUASHFS="$MOCK/unsquashfs" DUMPIMAGE="$MOCK/dumpimage" DTC="$MOCK/dtc" "$ROOT/scripts/inspect-firmware.sh" \
