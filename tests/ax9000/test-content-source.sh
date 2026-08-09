@@ -35,6 +35,22 @@ for component in luci-app-company-overlay luci-theme-liquid-company-patch compan
 	grep -Fq "$component" "$ROOT/CUSTOM-COMPONENTS.manifest"
 	grep -Fq "$component" "$ROOT/scripts/inspect-firmware.sh"
 done
+version=$(sed -n '1p' "$ROOT/VERSION")
+awk -F'|' -v expected="$version" '
+	/^[[:space:]]*#/ || /^[[:space:]]*$/ { next }
+	{
+		name=$1; component_version=$2
+		gsub(/^[[:space:]]+|[[:space:]]+$/, "", name)
+		gsub(/^[[:space:]]+|[[:space:]]+$/, "", component_version)
+		if (name == "luci-theme-liquid-company-patch") {
+			if (component_version != "0.3.1-r2") exit 1
+		}
+		else if (component_version != expected) exit 1
+	}
+' "$ROOT/CUSTOM-COMPONENTS.manifest" || {
+	echo 'CUSTOM-COMPONENTS.manifest version mismatch' >&2
+	exit 1
+}
 grep -q 'overlay-not-apk' "$ROOT/scripts/augment-sbom.py"
 grep -q 'source-patch-compiled-into-apk' "$ROOT/scripts/augment-sbom.py"
 grep -q 'companywrt:package-manifest-name' "$ROOT/scripts/augment-sbom.py"
