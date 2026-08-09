@@ -51,7 +51,10 @@ grep -Fq "resolve_single_inspector_tool dumpimage '*/host/u-boot-*/tools/dumpima
 grep -Fq "resolve_single_inspector_tool dtc '*/linux-*/scripts/dtc/dtc'" "$ROOT/scripts/build-buildroot.sh"
 grep -Fq "resolve_single_inspector_tool unsquashfs '*/host/squashfs4-*/squashfs-tools/unsquashfs'" "$ROOT/scripts/build-buildroot.sh"
 grep -Fq -- "-C \"\$SOURCE_DIR/staging_dir/host\" bin/usign" "$ROOT/scripts/build-buildroot.sh"
-grep -Fq 'staging_dir/host/bin/ucode' "$ROOT/scripts/build-buildroot.sh"
+grep -Fq 'package/utils/ucode/host/compile' "$ROOT/scripts/build-buildroot.sh"
+grep -Fq 'staging_dir/hostpkg/bin/ucode' "$ROOT/scripts/build-buildroot.sh"
+grep -Fq -- '-cdynlink=uci' "$ROOT/scripts/build-buildroot.sh"
+grep -Fq -- '-cdynlink=luci.core' "$ROOT/scripts/build-buildroot.sh"
 grep -Fq "\"\$UCODE_BIN\" -T -c" "$ROOT/scripts/build-buildroot.sh"
 if grep -Fq 'bin/.usign.bin' "$ROOT/scripts/build-buildroot.sh"; then
 	echo 'compile bundle must not assume an optional .usign.bin wrapper' >&2

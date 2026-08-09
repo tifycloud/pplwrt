@@ -353,11 +353,24 @@ make -C "$SOURCE_DIR" -j "$JOBS"
 
 USIGN_BIN="$SOURCE_DIR/staging_dir/host/bin/usign"
 [ -x "$USIGN_BIN" ] || { echo 'pinned Buildroot host usign is missing' >&2; exit 1; }
-UCODE_BIN="$SOURCE_DIR/staging_dir/host/bin/ucode"
+# ucode is a package host tool, not an OpenWrt tools/ host utility. It is not
+# built by `world` unless another package needs it, so request its pinned host
+# target explicitly and resolve it from hostpkg rather than staging_dir/host.
+make -C "$SOURCE_DIR" package/utils/ucode/host/compile
+UCODE_BIN="$SOURCE_DIR/staging_dir/hostpkg/bin/ucode"
 [ -x "$UCODE_BIN" ] || { echo 'pinned Buildroot host ucode compiler is missing' >&2; exit 1; }
-"$UCODE_BIN" -c "$LIQUID_SOURCE/root/usr/share/rpcd/ucode/luci-theme-liquid" >/dev/null
+UCODE_CHECK_DIR="$OVERLAY/.ucode-check"
+mkdir -p "$UCODE_CHECK_DIR"
+"$UCODE_BIN" -cdynlink=uci -o "$UCODE_CHECK_DIR/rpc.ucb" \
+	"$LIQUID_SOURCE/root/usr/share/rpcd/ucode/luci-theme-liquid"
 for template in header footer sysauth; do
-	"$UCODE_BIN" -T -c "$LIQUID_SOURCE/ucode/template/themes/liquid/$template.ut" >/dev/null
+	if [ "$template" = header ]; then
+		"$UCODE_BIN" -T -cdynlink=luci.core -o "$UCODE_CHECK_DIR/$template.ucb" \
+			"$LIQUID_SOURCE/ucode/template/themes/liquid/$template.ut"
+	else
+		"$UCODE_BIN" -T -c -o "$UCODE_CHECK_DIR/$template.ucb" \
+			"$LIQUID_SOURCE/ucode/template/themes/liquid/$template.ut"
+	fi
 done
 EMBEDDED_PUBLIC_KEY_ID=$("$USIGN_BIN" -F -p "$EMBEDDED_PUBLIC_KEY")
 [ "$EMBEDDED_PUBLIC_KEY_ID" = "$DECLARED_CURRENT_KEY_ID" ] || { echo 'current public key ID does not match ROTATION.env' >&2; exit 1; }
