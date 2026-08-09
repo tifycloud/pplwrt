@@ -42,7 +42,11 @@
 					params: [ 'mode', 'accent', 'accent_custom' ],
 					expect: { result: false }
 				});
-				return callSetPreferences(getMode(), getAccent(), getAccentCustom());
+				return callSetPreferences(getMode(), getAccent(), getAccentCustom())
+					.then(function(result) {
+						if (result !== true)
+							throw new Error('router rejected Liquid preferences');
+					});
 			}).catch(function(error) {
 				window.console.warn('Liquid preference save failed', error);
 			});

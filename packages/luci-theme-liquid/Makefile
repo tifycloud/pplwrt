@@ -1,7 +1,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=luci-theme-liquid
-PKG_VERSION:=0.3-company.1
+PKG_VERSION:=0.3.1
 PKG_RELEASE:=1
 
 PKG_MAINTAINER:=然后七年 <z@7ze.top>
