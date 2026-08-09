@@ -2,7 +2,7 @@
 set -eu
 ROOT=$(CDPATH='' cd -- "$(dirname "$0")/../.." && pwd)
 
-for package in usign jsonfilter kmod-wireguard wireguard-tools luci-proto-wireguard logd collectd collectd-mod-network; do
+for package in usign jsonfilter kmod-wireguard wireguard-tools luci-proto-wireguard logd dnsmasq-full curl ca-bundle ip-full; do
 	grep -qx "$package" "$ROOT/configs/ax9000/packages.txt" || { echo "missing base package: $package" >&2; exit 1; }
 done
 for package in sqm-scripts luci-app-sqm; do
@@ -12,7 +12,7 @@ for package in sqm-scripts luci-app-sqm; do
 		exit 1
 	fi
 done
-for package in luci-app-openclash openclash mihomo; do
+for package in luci-app-openclash openclash mihomo ruby ruby-yaml collectd collectd-mod-network bash kmod-tun kmod-nft-tproxy luci-compat; do
 	if grep -qx "$package" "$ROOT/configs/ax9000/packages.txt"; then
 		echo "OpenClash/Mihomo payload leaked into base: $package" >&2
 		exit 1
@@ -21,11 +21,13 @@ done
 grep -q 'mobile' "$ROOT/configs/overlay/usr/share/company/sqm-mobile-template"
 grep -Fq "disabled on \`unicom\`" "$ROOT/configs/overlay/usr/share/company/sqm-mobile-template"
 grep -q 'Plain syslog has no confidentiality' "$ROOT/configs/overlay/usr/share/company/log-forwarding-template"
-grep -q '/etc/init.d/collectd disable' "$ROOT/configs/overlay/etc/uci-defaults/99-companywrt"
-if grep -Eq "option enable '[^0]'|config network_(listen|server)" "$ROOT/configs/overlay/etc/config/collectd"; then
-	echo 'collectd overlay is not dormant by default' >&2
-	exit 1
-fi
+[ ! -e "$ROOT/configs/overlay/etc/config/collectd" ] || { echo 'collectd config leaked into lean base' >&2; exit 1; }
+grep -Fq 'collectd is intentionally absent' "$ROOT/configs/overlay/usr/share/company/monitoring-template"
+grep -Fq "mediaurlbase='/luci-static/company'" "$ROOT/configs/overlay/etc/uci-defaults/99-companywrt"
+grep -Fq 'MemAvailable' "$ROOT/scripts/memory-report.sh"
+grep -Fq 'MIN_AVAILABLE_PERCENT=70' "$ROOT/scripts/memory-report.sh"
+grep -Fq -- '--check-idle' "$ROOT/scripts/memory-report.sh"
+grep -Fq 'memory-report' "$ROOT/scripts/build-buildroot.sh"
 
 for component in luci-app-company-overlay luci-theme-company-overlay companywrt-device-overlay companywrt-operations-scripts; do
 	grep -Fq "$component" "$ROOT/CUSTOM-COMPONENTS.manifest"

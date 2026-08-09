@@ -3,18 +3,28 @@
 第一次启动断开 WAN，只保留一台管理员电脑直连隔离有线 LAN；不要通过 Wi-Fi、远程
 跳板或生产交换网络首登。准备官方恢复/串口、稳定电源和离线证据盘。
 
-1. 设置唯一随机 root 密码，核对 HTTPS 证书指纹；不要上传 `/etc/shadow`。
-2. 运行：
+1. 首次登录会自动进入 CompanyWrt 设置向导。先设置唯一 root 密码，再选择主 WAN 的
+   DHCP/PPPoE、填写联通宽带账号密码并配置基础 Wi-Fi；不要上传 `/etc/shadow`。
+2. 向导保存后运行：
 
    ```sh
    /usr/share/company/enrollment-preflight \
-     --expected-version 25.12.5-company.2-rc3
+     --expected-version 25.12.5-company.2-rc4
    ```
 
    所有 FAIL 必须解决；WARN 也写入验收记录。
+   冷启动满 10 分钟、尚未安装插件且没有客户端时，再运行：
+
+   ```sh
+   /usr/share/company/memory-report --check-idle
+   ```
+
+   它按内核 `MemAvailable` 验收，低于 70% 直接 FAIL，并列出 RSS 最大的进程；不能用
+   “都是缓存”跳过失败。
 3. 人工核对 `ubus call system board` 是 `xiaomi,ax9000-darkyun`、target 是
    `qualcommax/ipq807x`，再核对 `/etc/companywrt/build.conf` 和 VERSION。
-4. 保留官方 LuCI 主题；检查 uhttpd redirect/listener、WAN firewall UCI 和实际 nft rules。
+4. CompanyWrt 是默认全局主题；保留官方 OpenWrt2020 救援主题。检查 uhttpd、WAN firewall
+   UCI 和实际 nft rules。
 5. 逐个确认 DSA 端口、管理 IP、时区/NTP、监管域。先只启用 unicom，验证 IPv4/IPv6、
    DNS/NAT；再在维护窗口加入 mobile。
 6. 用 `company-network plan` 生成并逐行审阅 UCI staging plan。不存在 live apply。

@@ -22,7 +22,7 @@ PRODUCTION_GATE_SHA256=NONE
 HARDWARE_EVIDENCE_ID=NONE
 SERIAL_EVIDENCE_ID=NONE
 TESTED_FIRMWARE_SHA256=NONE
-EXPECTED_PACKAGE_COUNT=252
+EXPECTED_PACKAGE_COUNT=213
 
 usage() {
 	cat <<'EOF'
@@ -274,9 +274,10 @@ cp "$ROOT/scripts/ota-check.sh" "$OVERLAY/usr/share/company/ota-check"
 cp "$ROOT/scripts/ota-apply.sh" "$OVERLAY/usr/share/company/ota-apply"
 cp "$ROOT/scripts/enrollment-preflight.sh" "$OVERLAY/usr/share/company/enrollment-preflight"
 cp "$ROOT/scripts/ax9000-darkyun-preflight.sh" "$OVERLAY/usr/share/company/ax9000-darkyun-preflight"
+cp "$ROOT/scripts/memory-report.sh" "$OVERLAY/usr/share/company/memory-report"
 chmod 0755 "$OVERLAY/usr/share/company/company-network" "$OVERLAY/usr/share/company/ota-check" \
 	"$OVERLAY/usr/share/company/ota-apply" "$OVERLAY/usr/share/company/enrollment-preflight" \
-	"$OVERLAY/usr/share/company/ax9000-darkyun-preflight"
+	"$OVERLAY/usr/share/company/ax9000-darkyun-preflight" "$OVERLAY/usr/share/company/memory-report"
 chmod 0644 "$OVERLAY/usr/share/company/ota-common.sh" "$OVERLAY/etc/companywrt/keys/release.pub"
 
 PACKAGES=$(awk 'NF && $1 !~ /^#/ {printf "%s ", $1}' "$ROOT/configs/ax9000/packages.txt")
@@ -303,10 +304,6 @@ cp -R "$OVERLAY/." "$FILES_DIR/"
 	# tristate is unset.
 	printf 'CONFIG_LUCI_LANG_zh_Hans=y\n'
 	printf '# CONFIG_PACKAGE_dnsmasq is not set\n'
-	# OpenClash only needs Ruby/YAML parsing. The feeds default enables Ruby
-	# YJIT on aarch64, which adds a full Rust/LLVM host toolchain without
-	# providing any required router functionality.
-	printf '# CONFIG_RUBY_ENABLE_YJIT is not set\n'
 	for package in $PACKAGES; do
 		printf 'CONFIG_PACKAGE_%s=y\n' "$package"
 	done

@@ -1,9 +1,19 @@
 {
   "luci-app-company": {
-    "description": "CompanyWrt read-only dashboard",
+    "description": "CompanyWrt dashboard and guided first-run setup",
     "read": {
-      "uci": ["company"],
-      "ubus": {}
+      "uci": ["company", "network", "wireless", "luci", "firewall", "pbr"],
+      "ubus": {
+        "system": ["board", "info"],
+        "luci-rpc": ["getDHCPLeases"],
+        "network.interface": ["dump"]
+      }
+    },
+    "write": {
+      "uci": ["company", "network", "wireless", "luci"],
+      "ubus": {
+        "luci": ["setPassword"]
+      }
     }
   }
 }

@@ -1,7 +1,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=luci-app-company
-PKG_VERSION:=25.12.5-company.2-rc1
+PKG_VERSION:=25.12.5-company.2-rc4
 PKG_RELEASE:=1
 PKG_MAINTAINER:=CompanyWrt contributors
 PKG_LICENSE:=MIT
@@ -12,22 +12,22 @@ define Package/luci-app-company
   SECTION:=luci
   CATEGORY:=LuCI
   SUBMENU:=3. Applications
-  TITLE:=CompanyWrt operations dashboard
-  DEPENDS:=+luci-base +luci-compat +luci-mod-admin-full +luci-theme-company +ubus +rpcd
+  TITLE:=CompanyWrt dashboard and first-run setup
+  DEPENDS:=+luci-base +luci-mod-admin-full +luci-theme-company +ubus +rpcd
   PKGARCH:=all
 endef
 
 define Package/luci-app-company/description
- Read-only configuration, build and routing overview with safe links to OpenWrt
- network, firewall, PBR, wireless and system administration pages.
+ Practical operations dashboard and a guided first-run flow for administrator
+ password, DHCP/PPPoE WAN and AX9000 wireless setup.
 endef
 
 define Build/Compile
 endef
 
 define Package/luci-app-company/install
-	$(INSTALL_DIR) $(1)/usr/lib/lua/luci/view/company
-	$(CP) ./root/usr/lib/lua/luci/view/company/* $(1)/usr/lib/lua/luci/view/company/
+	$(INSTALL_DIR) $(1)/www/luci-static/resources/view/company
+	$(CP) ./root/www/luci-static/resources/view/company/* $(1)/www/luci-static/resources/view/company/
 	$(INSTALL_DIR) $(1)/usr/share/luci/menu.d
 	$(CP) ./root/usr/share/luci/menu.d/* $(1)/usr/share/luci/menu.d/
 	$(INSTALL_DIR) $(1)/usr/share/rpcd/acl.d

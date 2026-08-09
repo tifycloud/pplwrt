@@ -15,7 +15,7 @@ RC3 及后续版本只使用当前 key 主签。私钥路径必须在仓库外�
 ```sh
 USIGN_SECRET_KEY_FILE=/secure/companywrt-usign-current.key \
   ./scripts/sign-release-bundle.sh \
-    --input artifacts/preflight/25.12.5-company.2-rc3 --channel rc
+    --input artifacts/preflight/25.12.5-company.2-rc4 --channel rc
 ```
 
 原生 Linux x86_64 可直接运行 `build-buildroot.sh`。Apple Silicon 使用容器脚本；
@@ -29,7 +29,7 @@ USIGN_SECRET_KEY_FILE=/secure/companywrt-usign-current.key \
 该目录含 `COMPILE-ONLY-NOT-A-RELEASE.txt`，绝不能刷机或发布。正式默认目录为：
 
 ```text
-artifacts/rc/25.12.5-company.2-rc3/
+artifacts/rc/25.12.5-company.2-rc4/
 artifacts/beta/25.12.5-company.2-beta1/  # 仅 -betaN VERSION 的显式 beta 构建
 ```
 
@@ -42,7 +42,7 @@ artifacts/beta/25.12.5-company.2-beta1/  # 仅 -betaN VERSION 的显式 beta 构
 构建完成前必须全部成功：
 
 1. official OpenWrt tag/commit、五个 feed commit、设备 patch SHA 与 profile metadata；
-2. 包解析（包括 usign、WireGuard、logd、collectd；不含 mwan3/SQM）；
+2. 包解析（包括 usign、WireGuard、logd；不含 collectd/OpenClash runtime/mwan3/SQM）；
 3. sysupgrade tar 布局、FIT 内 DTB 和 squashfs 解包；DTB 必须是单一
    `rootfs=0x01180000+0x0e800000`、`cfg_bak=0x0f980000+0x00080000`，不得含 `ubi_kernel`；
 4. VERSION/build.conf/设备规格/公钥/OTA/迁移 preflight/LuCI/首启 HTTPS 文件存在；
@@ -50,7 +50,7 @@ artifacts/beta/25.12.5-company.2-beta1/  # 仅 -betaN VERSION 的显式 beta 构
    首启 overlay 不含默认密码或 WAN ACCEPT；
    检查器使用同一固定 Buildroot 生成的唯一 host `dumpimage`、`dtc`、`unsquashfs` 读取内核
    FIT/DTB/rootfs，不依赖宿主机同名工具；
-6. 暗云大分区目标固定的 252 个唯一 PACKAGE-MANIFEST 包与 CycloneDX 上游组件一一映射；其中包含由
+6. 暗云大分区目标固定的 213 个唯一 PACKAGE-MANIFEST 包与 CycloneDX 上游组件一一映射；其中包含由
    `CONFIG_LUCI_LANG_zh_Hans` 生成的 Base、PBR、防火墙和软件包管理器中文包；缺失组件补成
    `NOASSERTION`，custom overlay 进入 CUSTOM-COMPONENTS、NOTICE 和 MIT LICENSE；
 7. 无密钥编译目录先以 SHA256SUMS 封存；隔离签名 job 重新绑定 commit/内容报告/真机

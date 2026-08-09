@@ -1,0 +1,9 @@
+#!/bin/sh
+
+uci -q set luci.themes.CompanyWrt='/luci-static/company'
+if [ "$PKG_UPGRADE" != 1 ]; then
+	uci -q set luci.main.mediaurlbase='/luci-static/company'
+fi
+uci -q commit luci
+
+exit 0

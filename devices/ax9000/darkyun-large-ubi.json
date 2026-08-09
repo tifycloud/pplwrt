@@ -5,7 +5,7 @@
   "migration_board": "xiaomi,ax9000",
   "partition_variant": "darkyun-large-ubi-v1",
   "package_inventory": {
-    "expected_count": 252,
+    "expected_count": 213,
     "required_selection": "configs/ax9000/packages.txt"
   },
   "openwrt": {

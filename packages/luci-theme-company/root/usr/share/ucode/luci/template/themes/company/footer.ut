@@ -1,0 +1,11 @@
+	</main>
+</div>
+
+<footer class="luci">
+	<span>CompanyWrt · Xiaomi AX9000</span>
+	<span>Powered by {{ version.luciname }} {{ version.luciversion }}</span>
+</footer>
+
+<script>L.require('menu-openwrt2020')</script>
+</body>
+</html>
