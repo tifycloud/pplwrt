@@ -49,8 +49,8 @@ return view.extend({
 		this.root = E('div', { class: 'cw-wizard' }, [
 			E('header', { class: 'cw-wizard-head' }, [
 				E('p', { class: 'cw-eyebrow' }, '胖胖龙专用路由器 · 首次设置'),
-				E('h1', {}, '用 4 步完成基础联网'),
-				E('p', {}, '依次完成联网、Wi‑Fi 和管理员密码。宽带密码只保存在这台路由器中。'),
+				E('h1', {}, '用 3 步完成基础联网'),
+				E('p', {}, '先选上网方式，再设置 Wi‑Fi 和管理员密码。所有密码只保存在这台路由器中。'),
 				this.progress
 			]),
 			this.body
@@ -66,39 +66,35 @@ return view.extend({
 
 	capture: function() {
 		var value = function(id) { var node = document.getElementById(id); return node ? node.value.trim() : ''; };
-		if (this.step === 1) {
+		if (this.step === 0) {
 			var selected = this.body.querySelector('input[name="cw-wan-mode"]:checked');
 			this.state.mode = selected ? selected.value : 'dhcp';
 			this.state.username = value('cw-pppoe-user');
 			this.state.wanPassword = value('cw-pppoe-pass');
 		}
-		else if (this.step === 2) {
+		else if (this.step === 1) {
 			var enabled = document.getElementById('cw-wifi-enable');
 			this.state.enableWifi = enabled ? enabled.checked : false;
 			this.state.ssid = value('cw-wifi-ssid');
 			this.state.wifiPassword = value('cw-wifi-pass');
 		}
-		else if (this.step === 3) {
+		else if (this.step === 2) {
 			this.state.adminPassword = value('cw-admin-pass');
 			this.state.adminConfirm = value('cw-admin-confirm');
 		}
 	},
 
 	validate: function() {
-		if (this.step === 0) {
-			var agree = document.getElementById('cw-wired-confirm');
-			if (!agree || !agree.checked) return '请确认当前使用有线 LAN，并且尚未接入生产网络。';
-		}
-		if (this.step === 1 && this.state.mode === 'pppoe') {
+		if (this.step === 0 && this.state.mode === 'pppoe') {
 			if (!this.state.username) return 'PPPoE 模式必须填写宽带账号。';
 			if (!this.state.wanPassword && !uci.get('network', 'wan', 'password')) return 'PPPoE 模式必须填写宽带密码。';
 		}
-		if (this.step === 2 && this.state.enableWifi) {
+		if (this.step === 1 && this.state.enableWifi) {
 			if (this.state.ssid.length < 1 || this.state.ssid.length > 32) return 'Wi‑Fi 名称必须为 1–32 个字符。';
 			if (!this.state.wifiPassword && !this.existingWifiPassword()) return '启用 Wi‑Fi 时必须填写无线密码。';
 			if (this.state.wifiPassword && this.state.wifiPassword.length < 8) return 'Wi‑Fi 密码至少需要 8 个字符。';
 		}
-		if (this.step === 3) {
+		if (this.step === 2) {
 			if (this.state.adminPassword.length < 10) return '管理员密码至少需要 10 个字符。';
 			if (this.state.adminPassword !== this.state.adminConfirm) return '两次输入的管理员密码不一致。';
 		}
@@ -117,7 +113,7 @@ return view.extend({
 		this.capture();
 		var error = this.validate();
 		if (error) return this.showError(error);
-		if (this.step < 3) { this.step++; this.renderStep(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+		if (this.step < 2) { this.step++; this.renderStep(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
 		else this.applySettings();
 	},
 
@@ -129,24 +125,23 @@ return view.extend({
 
 	renderStep: function() {
 		var self = this, content = [], title = '', description = '';
-		dom.content(this.progress, [0, 1, 2, 3].map(function(index) { return E('span', { class: index <= self.step ? 'cw-step active' : 'cw-step' }); }));
+		var stepLabels = [ '宽带', 'Wi‑Fi', '管理' ];
+		dom.content(this.progress, stepLabels.map(function(label, index) {
+			return E('span', { class: index <= self.step ? 'cw-step active' : 'cw-step' }, [
+				E('b', {}, String(index + 1)), E('small', {}, label)
+			]);
+		}));
 
 		if (this.step === 0) {
-			title = '开始之前'; description = '这一步不会立即修改网络。先确认管理路径安全。';
+			title = '设置主宽带'; description = '直接选择你的上网方式。保存之前不会修改网络。';
 			content = [
-				E('label', { class: 'cw-choice' }, [
-					E('input', { id: 'cw-wired-confirm', type: 'checkbox' }),
-					E('span', {}, [ E('strong', {}, '我正在使用有线 LAN'), E('small', {}, 'WAN 尚未接入生产网络，并且我能在现场恢复设备。') ])
+				E('div', { class: 'cw-notice' }, [
+					E('strong', {}, '保持网线连接'),
+					E('p', {}, '建议先只连接管理电脑和 LAN；向导完成后再接联通 WAN。这个提示不会阻止你继续。')
 				]),
-				E('p', {}, '向导只配置主 WAN、基础 Wi‑Fi 和管理员密码。移动专线、VLAN、PBR 与 OpenClash 留到基础联网稳定后再配置。')
-			];
-		}
-		else if (this.step === 1) {
-			title = '设置主宽带'; description = '联通家宽通常使用 PPPoE；上级设备已经拨号时选择自动获取。';
-			content = [
 				E('div', { class: 'cw-choice-grid' }, [
-					choice('cw-wan-mode', 'pppoe', '宽带账号拨号（PPPoE）', '填写运营商提供的账号和密码。', this.state.mode === 'pppoe'),
-					choice('cw-wan-mode', 'dhcp', '自动获取地址（DHCP）', '光猫或上级路由器已经完成拨号。', this.state.mode === 'dhcp')
+					choice('cw-wan-mode', 'pppoe', 'PPPoE 宽带拨号', '光猫桥接：填写运营商提供的宽带账号和密码。', this.state.mode === 'pppoe'),
+					choice('cw-wan-mode', 'dhcp', 'DHCP 自动获取', '光猫或上级路由器已经拨号：无需填写账号。', this.state.mode === 'dhcp')
 				]),
 				E('div', { id: 'cw-pppoe-fields', class: 'cw-form-grid cw-block-space' }, [
 					field('cw-pppoe-user', '宽带账号', 'text', this.state.username, '例如运营商提供的手机号或宽带识别账号。', { autocomplete: 'username' }),
@@ -154,7 +149,7 @@ return view.extend({
 				])
 			];
 		}
-		else if (this.step === 2) {
+		else if (this.step === 1) {
 			title = '设置 Wi‑Fi'; description = '三组无线使用同一名称和密码，5 GHz 保持设备默认的安全带宽，HE160 不在向导中启用。';
 			content = [
 				E('label', { class: 'cw-choice' }, [
@@ -185,17 +180,18 @@ return view.extend({
 			];
 		}
 
-		dom.content(this.body, [
+		var bodyNodes = [
 			E('div', { class: 'cw-error', role: 'alert' }),
-			E('h2', {}, title), E('p', {}, description),
-			content,
+			E('h2', {}, title), E('p', { class: 'cw-step-description' }, description)
+		].concat(content, [
 			E('div', { class: 'cw-wizard-nav' }, [
 				E('button', { class: 'cbi-button-reset', click: this.back.bind(this) }, this.step === 0 ? '暂时离开' : '上一步'),
-				E('button', { class: 'cbi-button-apply', click: this.next.bind(this) }, this.step === 3 ? '保存并应用' : '继续')
+				E('button', { class: 'cbi-button-apply', click: this.next.bind(this) }, this.step === 2 ? '保存并应用' : '继续')
 			])
 		]);
+		dom.content(this.body, bodyNodes);
 
-		if (this.step === 1) {
+		if (this.step === 0) {
 			var modeInputs = this.body.querySelectorAll('input[name="cw-wan-mode"]');
 			var syncWanFields = function() {
 				var selected = self.body.querySelector('input[name="cw-wan-mode"]:checked');
@@ -205,7 +201,7 @@ return view.extend({
 			modeInputs.forEach(function(input) { input.addEventListener('change', syncWanFields); });
 			syncWanFields();
 		}
-		if (this.step === 2) {
+		if (this.step === 1) {
 			var wifiToggle = document.getElementById('cw-wifi-enable');
 			var syncWifiFields = function() {
 				var fields = document.getElementById('cw-wifi-fields');

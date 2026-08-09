@@ -15,7 +15,7 @@ RC3 及后续版本只使用当前 key 主签。私钥路径必须在仓库外�
 ```sh
 USIGN_SECRET_KEY_FILE=/secure/companywrt-usign-current.key \
   ./scripts/sign-release-bundle.sh \
-    --input artifacts/preflight/25.12.5-company.2-rc5 --channel rc
+    --input artifacts/preflight/25.12.5-company.2-rc6 --channel rc
 ```
 
 原生 Linux x86_64 可直接运行 `build-buildroot.sh`。Apple Silicon 使用容器脚本；
@@ -29,7 +29,7 @@ USIGN_SECRET_KEY_FILE=/secure/companywrt-usign-current.key \
 该目录含 `COMPILE-ONLY-NOT-A-RELEASE.txt`，绝不能刷机或发布。正式默认目录为：
 
 ```text
-artifacts/rc/25.12.5-company.2-rc5/
+artifacts/rc/25.12.5-company.2-rc6/
 artifacts/beta/25.12.5-company.2-beta1/  # 仅 -betaN VERSION 的显式 beta 构建
 ```
 
