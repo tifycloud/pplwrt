@@ -167,7 +167,7 @@
       </nav>
       <div class="release-card">
         <span>当前候选</span>
-        <strong>25.12.5-company.2-rc5</strong>
+        <strong>25.12.5-company.2-rc6</strong>
         <span>只适用于已采证的暗云 Boot 大分区 AX9000</span>
       </div>
     </aside>
@@ -191,15 +191,15 @@
       <section id="scope">
         <h2>01 · 匹配设备身份</h2>
         <div class="callout">
-          <p><strong>先看当前系统。</strong>已经运行 CompanyWrt RC2/RC3 时，在 LuCI 上传 RC5 sysupgrade，不再使用 <code>-F</code>；若要完整体验胖胖龙四步首次设置，先备份并取消“保留设置”。只有仍运行 KWRT、board 为 <code>xiaomi,ax9000</code> 的设备才执行下面的一次性迁移门禁。</p>
+          <p><strong>先看当前系统。</strong>已经运行 CompanyWrt RC2–RC5 时，在 LuCI 上传 RC6 sysupgrade，不再使用 <code>-F</code>；若要完整体验胖胖龙三步首次设置和默认深色主题，先备份并取消“保留设置”。只有仍运行 KWRT、board 为 <code>xiaomi,ax9000</code> 的设备才执行下面的一次性迁移门禁。</p>
         </div>
-        <h3>现有 CompanyWrt：换一台 Windows 电脑升级 RC5</h3>
+        <h3>现有 CompanyWrt：换一台 Windows 电脑升级 RC6</h3>
         <ol>
-          <li>从第 3 节 Release 下载并用 PowerShell 校验 RC5；路由器正常重启后，只把 Windows 电脑接到 LAN，网卡保持自动获取地址，暂不接 WAN。</li>
-          <li>访问当前管理地址（全新默认 <code>https://192.168.1.1/</code>），进入“系统 → 备份/升级”，先下载配置备份，再上传 RC5 sysupgrade。</li>
+          <li>从第 3 节 Release 下载并用 PowerShell 校验 RC6；路由器正常重启后，只把 Windows 电脑接到 LAN，网卡保持自动获取地址，暂不接 WAN。</li>
+          <li>访问当前管理地址（全新默认 <code>https://192.168.1.1/</code>），进入“系统 → 备份/升级”，先下载配置备份，再上传 RC6 sysupgrade。</li>
           <li>不要使用强制升级；系统必须正常识别 <code>xiaomi,ax9000-darkyun</code>。任何不兼容提示都应停止。</li>
           <li>本次要验证 Liquid 和首次向导，建议关闭“保留设置”；这会清空宽带、Wi-Fi、密码和插件配置。若保留设置，向导可能不会再次出现。</li>
-          <li>升级后等待至少 8–10 分钟，重新获取地址并进入“胖胖龙专用路由器”四步向导。光猫桥接选 PPPoE 并填写宽带账号/密码；光猫已拨号选 DHCP。</li>
+          <li>升级后等待至少 8–10 分钟，重新获取地址并进入“胖胖龙专用路由器”三步向导。第一页直接显示 DHCP/PPPoE，不再要求勾选有线确认；光猫桥接选 PPPoE 并填写宽带账号/密码，光猫已拨号选 DHCP。</li>
         </ol>
         <p>开始前必须确认当前路由器是本项目已经采证的 KWRT 设备。它使用暗云 Boot 单 UBI 大分区，当前系统报告 <code>xiaomi,ax9000</code>，迁移后的专属身份则是 <code>xiaomi,ax9000-darkyun</code>。</p>
         <table>
@@ -232,12 +232,12 @@
 
       <section id="download">
         <h2>03 · 下载与校验镜像</h2>
-        <p>只从 <a href="https://github.com/tifycloud/pplwrt/releases/tag/v25.12.5-company.2-rc5">CompanyWrt RC5 Release</a> 下载下面这个 sysupgrade 文件：</p>
+        <p>只从 <a href="https://github.com/tifycloud/pplwrt/releases/tag/v25.12.5-company.2-rc6">CompanyWrt RC6 Release</a> 下载下面这个 sysupgrade 文件：</p>
         <div class="code-wrap"><pre><code>openwrt-qualcommax-ipq807x-xiaomi_ax9000_darkyun-squashfs-sysupgrade.bin</code></pre><button class="copy" type="button">复制</button></div>
         <table>
           <tbody>
-            <tr><td>文件大小</td><td>19,118,685 bytes</td></tr>
-            <tr><td>SHA256</td><td><code>a9d2425017d76367f76d709ce7a6fa8de53d1f664e0e1514c27f9dfc06dfc1ed</code></td></tr>
+            <tr><td>文件大小</td><td>19,128,925 bytes</td></tr>
+            <tr><td>SHA256</td><td><code>06ed3b07dd173ae55b3730acd03f7c804164e1587517917fc8b806accee78de0</code></td></tr>
           </tbody>
         </table>
         <h3>Windows PowerShell</h3>
@@ -251,7 +251,7 @@
 
       <section id="gate">
         <h2>04 · 确认刷前门禁仍有效</h2>
-        <p>RC5 发布检查不能代替目标路由器的现场检查。路由器重启、换过固件或更换设备后，旧的 <code>/tmp</code> 门禁结果全部失效。RC5 Release 同时提供硬件 preflight、first-flash、OTA 公共脚本、公钥、manifest 和签名；必须在本次维护窗口重新运行，确认 MIBIB、两份 APPSBL、MTD、UBI、KWRT 升级脚本、签名、大小、SHA 和 <code>sysupgrade -T -F</code> 全部通过。</p>
+        <p>RC6 发布检查不能代替目标路由器的现场检查。路由器重启、换过固件或更换设备后，旧的 <code>/tmp</code> 门禁结果全部失效。RC6 Release 同时提供硬件 preflight、first-flash、OTA 公共脚本、公钥、manifest 和签名；必须在本次维护窗口重新运行，确认 MIBIB、两份 APPSBL、MTD、UBI、KWRT 升级脚本、签名、大小、SHA 和 <code>sysupgrade -T -F</code> 全部通过。</p>
         <p>门禁通过后会打印本次随机工作目录。正式刷写前，用实际目录名替换 <code>XXXXXX</code> 并再检查一次：</p>
         <div class="code-wrap"><pre><code>sha256sum '/tmp/companywrt-first-flash.XXXXXX/ota/openwrt-qualcommax-ipq807x-xiaomi_ax9000_darkyun-squashfs-sysupgrade.bin'</code></pre><button class="copy" type="button">复制</button></div>
         <div class="callout danger">
@@ -259,16 +259,16 @@
           <p><code>/tmp</code> 是内存盘，重启后镜像和门禁结果会消失。当前已采证 KWRT 没有内置 usign，必须由维护者使用已审计的临时工具流程重新执行门禁；不要从未知第三方源安装，不要跳过签名验证，也不要只上传镜像后手工使用 <code>-F</code>。</p>
         </div>
         <p>确认已审计的 <code>usign</code> 可用后，在路由器 SSH 中运行下面的只读门禁。只有出现 <code>FIRST-FLASH CANDIDATE PASSED ALL AUTOMATED GATES</code> 才能继续；脚本不会刷机。</p>
-        <div class="code-wrap"><pre><code>cd /tmp/companywrt-rc5
+        <div class="code-wrap"><pre><code>cd /tmp/companywrt-rc6
 chmod 0700 ax9000-darkyun-preflight.sh ax9000-darkyun-first-flash.sh ota-common.sh
 ./ax9000-darkyun-first-flash.sh \
   --manifest ./RELEASE-MANIFEST \
   --signature ./RELEASE-MANIFEST.sig \
   --image ./openwrt-qualcommax-ipq807x-xiaomi_ax9000_darkyun-squashfs-sysupgrade.bin \
   --public-key ./companywrt-release.pub \
-  --expected-version 25.12.5-company.2-rc5 \
-  --confirm-version 25.12.5-company.2-rc5 \
-  --confirm-sha256 a9d2425017d76367f76d709ce7a6fa8de53d1f664e0e1514c27f9dfc06dfc1ed</code></pre><button class="copy" type="button">复制</button></div>
+  --expected-version 25.12.5-company.2-rc6 \
+  --confirm-version 25.12.5-company.2-rc6 \
+  --confirm-sha256 06ed3b07dd173ae55b3730acd03f7c804164e1587517917fc8b806accee78de0</code></pre><button class="copy" type="button">复制</button></div>
       </section>
 
       <section id="flash">
@@ -293,21 +293,22 @@ ssh root@192.168.1.1</code></pre><button class="copy" type="button">复制</butt
         <div class="code-wrap"><pre><code>passwd</code></pre><button class="copy" type="button">复制</button></div>
         <p>然后运行首次 enrollment：</p>
         <div class="code-wrap"><pre><code>/usr/share/company/enrollment-preflight \
-  --expected-version 25.12.5-company.2-rc5</code></pre><button class="copy" type="button">复制</button></div>
+  --expected-version 25.12.5-company.2-rc6</code></pre><button class="copy" type="button">复制</button></div>
         <p>保存系统身份和分区状态：</p>
         <div class="code-wrap"><pre><code>ubus call system board
 cat /etc/companywrt/VERSION
 cat /etc/companywrt/build.conf
 cat /proc/mtd
 ubinfo -a</code></pre><button class="copy" type="button">复制</button></div>
-        <p>预期是版本 <code>25.12.5-company.2-rc5</code>、profile <code>xiaomi_ax9000_darkyun</code>、board <code>xiaomi,ax9000-darkyun</code> 和分区变体 <code>darkyun-large-ubi-v1</code>。任何 FAIL 或不一致都要停止接入生产网络。</p>
+        <p>预期是版本 <code>25.12.5-company.2-rc6</code>、profile <code>xiaomi_ax9000_darkyun</code>、board <code>xiaomi,ax9000-darkyun</code> 和分区变体 <code>darkyun-large-ubi-v1</code>。任何 FAIL 或不一致都要停止接入生产网络。</p>
       </section>
 
       <section id="configure">
         <h2>07 · 按安全顺序配置</h2>
         <ol>
           <li>先设置时区、NTP、密码和 HTTPS，并导出第一次干净配置备份。</li>
-          <li>用“胖胖龙专用路由器”四步向导配置联通主 WAN：光猫桥接时选 PPPoE 并填写宽带账号/密码；光猫已拨号时选 DHCP。向导同时设置管理员密码和三射频 Wi-Fi。</li>
+          <li>用“胖胖龙专用路由器”三步向导配置主 WAN、三射频 Wi-Fi 和管理员密码。第一页直接选择 DHCP/PPPoE，网线提示仅为安全建议，不再阻止继续。</li>
+          <li>Liquid 默认使用深色主题；概览页直接显示可用内存、实际已用内存及百分比，不需要悬停。</li>
           <li>Wi-Fi 从 <strong>HE80</strong> 开始；HE160 仍是 AX9000 专项测试项。</li>
           <li>先只接联通宽带，验证 IPv4/IPv6、DNS、NAT 和 WAN 入站拒绝。</li>
           <li>再接移动专线：联通用于办公和下载，移动用于服务器及指定稳定上传连接。</li>
@@ -345,7 +346,7 @@ ubinfo -a</code></pre><button class="copy" type="button">复制</button></div>
 
       <section class="final" id="conclusion">
         <h2>结论</h2>
-        <p>RC5 已达到已采证暗云 Boot 大分区 AX9000 的<strong>受控现场测试候选</strong>条件。它还不是企业生产稳定版；只有完成首次刷写或升级，并把启动、空载内存、24 小时稳定性、无线、双 WAN、VLAN、安全、OTA 和救援矩阵逐项跑通，才能给出最终生产结论。</p>
+        <p>RC6 已达到已采证暗云 Boot 大分区 AX9000 的<strong>受控现场测试候选</strong>条件。它还不是企业生产稳定版；只有完成首次刷写或升级，并把启动、空载内存、24 小时稳定性、无线、双 WAN、VLAN、安全、OTA 和救援矩阵逐项跑通，才能给出最终生产结论。</p>
       </section>
       <p class="footer">CompanyWrt operator documentation · 本页不包含设备密码、订阅或私钥。</p>
     </article>
