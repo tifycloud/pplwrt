@@ -1,4 +1,5 @@
 config company 'main'
+	option product_name '胖胖龙专用路由器'
 	option enabled '1'
 	option channel 'rc'
 	option image_url 'https://github.com/tifycloud/pplwrt/releases/'

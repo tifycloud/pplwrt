@@ -1,0 +1,10 @@
+{
+  "luci-theme-liquid": {
+    "description": "Persist authenticated Liquid theme preferences",
+    "write": {
+      "ubus": {
+        "luci-theme-liquid": ["setPreferences"]
+      }
+    }
+  }
+}

@@ -22,7 +22,7 @@ PRODUCTION_GATE_SHA256=NONE
 HARDWARE_EVIDENCE_ID=NONE
 SERIAL_EVIDENCE_ID=NONE
 TESTED_FIRMWARE_SHA256=NONE
-EXPECTED_PACKAGE_COUNT=213
+EXPECTED_PACKAGE_COUNT=214
 
 usage() {
 	cat <<'EOF'
@@ -149,7 +149,15 @@ fi
 
 awk -F'|' -v expected="$VERSION" '
 	/^[[:space:]]*#/ || /^[[:space:]]*$/ { next }
-	{ version=$2; gsub(/^[[:space:]]+|[[:space:]]+$/, "", version); if (version != expected) exit 1 }
+	{
+		name=$1; version=$2
+		gsub(/^[[:space:]]+|[[:space:]]+$/, "", name)
+		gsub(/^[[:space:]]+|[[:space:]]+$/, "", version)
+		if (name == "luci-theme-liquid-company-patch") {
+			if (version != "0.3.1-r1") exit 1
+		}
+		else if (version != expected) exit 1
+	}
 ' "$ROOT/CUSTOM-COMPONENTS.manifest" || { echo 'CUSTOM-COMPONENTS.manifest version mismatch' >&2; exit 1; }
 
 json_value() {
@@ -242,15 +250,25 @@ cleanup() {
 trap cleanup EXIT INT TERM
 
 cp -R "$ROOT/configs/overlay/." "$OVERLAY/"
-for package in luci-theme-company luci-app-company; do
-	src="$ROOT/packages/$package/root"
-	[ -d "$src" ] || { echo "missing overlay component root: $src" >&2; exit 1; }
-	cp -R "$src/." "$OVERLAY/"
-done
+APP_OVERLAY_SOURCE="$ROOT/packages/luci-app-company/root"
+[ -d "$APP_OVERLAY_SOURCE" ] || { echo "missing overlay component root: $APP_OVERLAY_SOURCE" >&2; exit 1; }
+cp -R "$APP_OVERLAY_SOURCE/." "$OVERLAY/"
+
+# Vendor the audited Liquid source as a real Buildroot package so it appears
+# in the APK manifest/SBOM. The CompanyWrt application remains an explicitly
+# inventoried files overlay until its own RPC API stabilizes.
+LIQUID_SOURCE="$ROOT/packages/luci-theme-liquid"
+LIQUID_TARGET="$SOURCE_DIR/package/luci-theme-liquid"
+[ -f "$LIQUID_SOURCE/UPSTREAM.md" ] || { echo 'missing pinned Liquid upstream record' >&2; exit 1; }
+case "$LIQUID_TARGET" in "$SOURCE_DIR"/package/luci-theme-liquid) rm -rf "$LIQUID_TARGET" ;; *) echo 'refusing unsafe Liquid package path' >&2; exit 1 ;; esac
+mkdir -p "$LIQUID_TARGET"
+cp -R "$LIQUID_SOURCE/." "$LIQUID_TARGET/"
 # Finder metadata is ignored by git but may exist in a developer checkout.
 # Never let host-only files become part of the firmware overlay.
 find "$OVERLAY" -type f -name .DS_Store -delete
+find "$LIQUID_TARGET" -type f -name .DS_Store -delete
 [ -z "$(find "$OVERLAY" -name .DS_Store -print -quit)" ] || { echo 'host metadata leaked into firmware overlay' >&2; exit 1; }
+[ -z "$(find "$LIQUID_TARGET" -name .DS_Store -print -quit)" ] || { echo 'host metadata leaked into Liquid package sources' >&2; exit 1; }
 if find "$OVERLAY" -type f \( -name '*.key' -o -name '*.sec' -o -name '*.secret' -o -name '*.pem' -o -name '.env' \) ! -path '*/etc/companywrt/keys/release.pub' -print -quit | grep -q .; then
 	echo 'refusing secret-like material in the firmware overlay' >&2
 	exit 1
@@ -335,6 +353,25 @@ make -C "$SOURCE_DIR" -j "$JOBS"
 
 USIGN_BIN="$SOURCE_DIR/staging_dir/host/bin/usign"
 [ -x "$USIGN_BIN" ] || { echo 'pinned Buildroot host usign is missing' >&2; exit 1; }
+# ucode is a package host tool, not an OpenWrt tools/ host utility. It is not
+# built by `world` unless another package needs it, so request its pinned host
+# target explicitly and resolve it from hostpkg rather than staging_dir/host.
+make -C "$SOURCE_DIR" package/utils/ucode/host/compile
+UCODE_BIN="$SOURCE_DIR/staging_dir/hostpkg/bin/ucode"
+[ -x "$UCODE_BIN" ] || { echo 'pinned Buildroot host ucode compiler is missing' >&2; exit 1; }
+UCODE_CHECK_DIR="$OVERLAY/.ucode-check"
+mkdir -p "$UCODE_CHECK_DIR"
+"$UCODE_BIN" -cdynlink=uci -o "$UCODE_CHECK_DIR/rpc.ucb" \
+	"$LIQUID_SOURCE/root/usr/share/rpcd/ucode/luci-theme-liquid"
+for template in header footer sysauth; do
+	if [ "$template" = header ]; then
+		"$UCODE_BIN" -T -cdynlink=luci.core -o "$UCODE_CHECK_DIR/$template.ucb" \
+			"$LIQUID_SOURCE/ucode/template/themes/liquid/$template.ut"
+	else
+		"$UCODE_BIN" -T -c -o "$UCODE_CHECK_DIR/$template.ucb" \
+			"$LIQUID_SOURCE/ucode/template/themes/liquid/$template.ut"
+	fi
+done
 EMBEDDED_PUBLIC_KEY_ID=$("$USIGN_BIN" -F -p "$EMBEDDED_PUBLIC_KEY")
 [ "$EMBEDDED_PUBLIC_KEY_ID" = "$DECLARED_CURRENT_KEY_ID" ] || { echo 'current public key ID does not match ROTATION.env' >&2; exit 1; }
 [ "$("$USIGN_BIN" -F -p "$PREVIOUS_PUBLIC_KEY")" = "$DECLARED_PREVIOUS_KEY_ID" ] || { echo 'previous public key ID does not match ROTATION.env' >&2; exit 1; }

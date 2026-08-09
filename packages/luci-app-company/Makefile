@@ -1,7 +1,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=luci-app-company
-PKG_VERSION:=25.12.5-company.2-rc4
+PKG_VERSION:=25.12.5-company.2-rc5
 PKG_RELEASE:=1
 PKG_MAINTAINER:=CompanyWrt contributors
 PKG_LICENSE:=MIT
@@ -12,8 +12,8 @@ define Package/luci-app-company
   SECTION:=luci
   CATEGORY:=LuCI
   SUBMENU:=3. Applications
-  TITLE:=CompanyWrt dashboard and first-run setup
-  DEPENDS:=+luci-base +luci-mod-admin-full +luci-theme-company +ubus +rpcd
+  TITLE:=胖胖龙专用路由器 dashboard and first-run setup
+  DEPENDS:=+luci-base +luci-mod-admin-full +luci-theme-liquid +ubus +rpcd
   PKGARCH:=all
 endef
 

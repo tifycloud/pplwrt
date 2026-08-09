@@ -171,10 +171,17 @@ REQUIRED_FILES='
 /usr/share/company/sqm-mobile-template
 /www/luci-static/resources/view/company/dashboard.js
 /www/luci-static/resources/view/company/setup.js
-/www/luci-static/company/cascade.css
-/www/luci-static/company/logo.svg
-/usr/share/ucode/luci/template/themes/company/header.ut
-/usr/share/ucode/luci/template/themes/company/footer.ut
+/www/luci-static/liquid/cascade.css
+/www/luci-static/liquid/main.js
+/www/luci-static/liquid/logo.svg
+/www/luci-static/resources/menu-liquid.js
+/www/luci-static/resources/view/liquid/sysauth.js
+/usr/share/ucode/luci/template/themes/liquid/header.ut
+/usr/share/ucode/luci/template/themes/liquid/footer.ut
+/usr/share/ucode/luci/template/themes/liquid/sysauth.ut
+/usr/share/licenses/luci-theme-liquid/LICENSE
+/usr/share/rpcd/ucode/luci-theme-liquid
+/usr/share/rpcd/acl.d/luci-theme-liquid.json
 '
 for path in $REQUIRED_FILES; do
 	rootfs_has "$path" || { echo "required rootfs file missing: $path" >&2; exit 1; }
@@ -201,7 +208,7 @@ case "$ROOT_PASSWORD_FIELD" in
 esac
 rootfs_cat /etc/uci-defaults/99-companywrt > "$TMP/firstboot"
 grep -q "uhttpd.main.redirect_https='1'" "$TMP/firstboot" || { echo 'HTTPS redirect is missing from first boot' >&2; exit 1; }
-grep -q "luci.main.mediaurlbase='/luci-static/company'" "$TMP/firstboot" || { echo 'CompanyWrt is not the first-boot theme' >&2; exit 1; }
+grep -q "luci.main.mediaurlbase='/luci-static/liquid'" "$TMP/firstboot" || { echo 'Liquid is not the first-boot theme' >&2; exit 1; }
 if grep -Eqi '(password|passwd).*(=|set).*["'"'][^"'"']+["'"']|firewall\..*input=.ACCEPT' "$TMP/firstboot"; then
 	echo 'first boot appears to embed a password or allow WAN input' >&2
 	exit 1
@@ -236,7 +243,7 @@ grep -q "set network.loopback='interface'" "$TMP/config-generate" || { echo 'def
 grep -Fq "set network.\${1}6.device=" "$TMP/config-generate" || { echo 'default WAN6 generation is missing' >&2; exit 1; }
 grep -q "set network.@device\[-1\].type='bridge'" "$TMP/config-generate" || { echo 'default DSA bridge generation is missing' >&2; exit 1; }
 
-for package in firewall4 pbr luci-app-pbr luci-ssl-openssl usign jsonfilter kmod-wireguard wireguard-tools luci-proto-wireguard logd dnsmasq-full curl ca-bundle ip-full; do
+for package in firewall4 pbr luci-app-pbr luci-ssl-openssl luci-theme-liquid usign jsonfilter kmod-wireguard wireguard-tools luci-proto-wireguard logd dnsmasq-full curl ca-bundle ip-full; do
 	grep -Eq "^$package - [^[:space:]]+" "$PACKAGE_MANIFEST" || { echo "required package missing from manifest: $package" >&2; exit 1; }
 done
 if grep -Eq '^(mwan3|luci-app-sqm|sqm-scripts|luci-app-openclash|openclash|mihomo|ruby|ruby-yaml|collectd|collectd-mod-[^ ]+|bash|kmod-tun|kmod-nft-tproxy|luci-compat) - ' "$PACKAGE_MANIFEST"; then
@@ -249,8 +256,24 @@ for path in /etc/config/openclash /etc/openclash /usr/share/openclash /usr/bin/m
 		exit 1
 	fi
 done
-for component in luci-app-company-overlay luci-theme-company-overlay companywrt-device-overlay companywrt-operations-scripts; do
+for component in luci-app-company-overlay luci-theme-liquid-company-patch companywrt-device-overlay companywrt-operations-scripts; do
 	rootfs_cat /usr/share/company/CUSTOM-COMPONENTS.manifest | grep -Fq "$component" || { echo "custom component inventory missing: $component" >&2; exit 1; }
+done
+
+rootfs_cat /usr/share/ucode/luci/template/themes/liquid/header.ut > "$TMP/liquid-header.ut"
+rootfs_cat /www/luci-static/liquid/main.js > "$TMP/liquid-main.js"
+rootfs_cat /www/luci-static/resources/view/company/dashboard.js > "$TMP/company-dashboard.js"
+grep -Fq '胖胖龙专用路由器' "$TMP/liquid-header.ut" || { echo 'Liquid theme is missing the CompanyWrt product name' >&2; exit 1; }
+grep -Fq '胖胖龙专用路由器' "$TMP/company-dashboard.js" || { echo 'dashboard is missing the CompanyWrt product name' >&2; exit 1; }
+if grep -Eqi 'www\.bing\.com|bing-wallpaper|wget|system\(' "$TMP/liquid-header.ut" "$TMP/liquid-main.js"; then
+	echo 'Liquid runtime still contains external wallpaper or shell execution logic' >&2
+	exit 1
+fi
+for path in /www/liquid-cache /usr/share/ucode/luci/controller/liquid.uc /usr/share/luci/menu.d/liquid.json; do
+	if rootfs_has "$path"; then
+		echo "unsafe/deprecated Liquid runtime path unexpectedly embedded: $path" >&2
+		exit 1
+	fi
 done
 
 IMAGE_DIGEST=$(sha256sum "$IMAGE" | awk '{print $1}')
@@ -270,6 +293,7 @@ fi
 	printf 'root_password_state=%s\nembedded_usign_key_id=%s\n' "$ROOT_PASSWORD_STATE" "$EMBEDDED_KEY_ID"
 	printf 'collectd_preinstalled=NO\nmemory_metric=MEMAVAILABLE\n'
 	printf 'openclash_preinstalled=NO\nmihomo_preinstalled=NO\n'
+	printf 'liquid_theme_compiled=PASS\nliquid_external_wallpaper=REMOVED\nproduct_name=胖胖龙专用路由器\n'
 	printf 'loopback_dsa_wan6_generation=PRESERVED\ndefault_firewall_rules=PRESERVED\nwan_wan6_input=REJECT\n'
 	printf 'custom_overlay_components_inventoried=PASS\n'
 	printf 'hardware_validation=%s\n' "$HARDWARE_VALIDATION"

@@ -23,23 +23,27 @@ grep -Fq "disabled on \`unicom\`" "$ROOT/configs/overlay/usr/share/company/sqm-m
 grep -q 'Plain syslog has no confidentiality' "$ROOT/configs/overlay/usr/share/company/log-forwarding-template"
 [ ! -e "$ROOT/configs/overlay/etc/config/collectd" ] || { echo 'collectd config leaked into lean base' >&2; exit 1; }
 grep -Fq 'collectd is intentionally absent' "$ROOT/configs/overlay/usr/share/company/monitoring-template"
-grep -Fq "mediaurlbase='/luci-static/company'" "$ROOT/configs/overlay/etc/uci-defaults/99-companywrt"
+grep -Fq "mediaurlbase='/luci-static/liquid'" "$ROOT/configs/overlay/etc/uci-defaults/99-companywrt"
+grep -Fq "description='胖胖龙专用路由器'" "$ROOT/configs/overlay/etc/uci-defaults/99-companywrt"
+grep -qx 'luci-theme-liquid' "$ROOT/configs/ax9000/packages.txt"
 grep -Fq 'MemAvailable' "$ROOT/scripts/memory-report.sh"
 grep -Fq 'MIN_AVAILABLE_PERCENT=70' "$ROOT/scripts/memory-report.sh"
 grep -Fq -- '--check-idle' "$ROOT/scripts/memory-report.sh"
 grep -Fq 'memory-report' "$ROOT/scripts/build-buildroot.sh"
 
-for component in luci-app-company-overlay luci-theme-company-overlay companywrt-device-overlay companywrt-operations-scripts; do
+for component in luci-app-company-overlay luci-theme-liquid-company-patch companywrt-device-overlay companywrt-operations-scripts; do
 	grep -Fq "$component" "$ROOT/CUSTOM-COMPONENTS.manifest"
 	grep -Fq "$component" "$ROOT/scripts/inspect-firmware.sh"
 done
 grep -q 'overlay-not-apk' "$ROOT/scripts/augment-sbom.py"
+grep -q 'source-patch-compiled-into-apk' "$ROOT/scripts/augment-sbom.py"
 grep -q 'companywrt:package-manifest-name' "$ROOT/scripts/augment-sbom.py"
 grep -q 'NOASSERTION' "$ROOT/scripts/augment-sbom.py"
 grep -q -- '--package-manifest' "$ROOT/scripts/build-buildroot.sh"
-grep -q 'current Buildroot pipeline does not compile or install them as APKs' "$ROOT/NOTICE"
+grep -q 'luci-theme-liquid' "$ROOT/NOTICE"
 grep -Fq 'THE SOFTWARE IS PROVIDED "AS IS"' "$ROOT/LICENSE"
-grep -Fq "packages/\$package/root" "$ROOT/scripts/build-buildroot.sh"
+grep -Fq 'packages/luci-app-company/root' "$ROOT/scripts/build-buildroot.sh"
+grep -Fq 'package/luci-theme-liquid' "$ROOT/scripts/build-buildroot.sh"
 grep -q 'CURRENT_PUBLIC_KEY' "$ROOT/scripts/build-buildroot.sh"
 grep -q 'inspect-firmware.sh' "$ROOT/scripts/build-buildroot.sh"
 grep -Fq "Buildroot must produce exactly one host \$tool_name inspector binary" "$ROOT/scripts/build-buildroot.sh"
@@ -47,6 +51,11 @@ grep -Fq "resolve_single_inspector_tool dumpimage '*/host/u-boot-*/tools/dumpima
 grep -Fq "resolve_single_inspector_tool dtc '*/linux-*/scripts/dtc/dtc'" "$ROOT/scripts/build-buildroot.sh"
 grep -Fq "resolve_single_inspector_tool unsquashfs '*/host/squashfs4-*/squashfs-tools/unsquashfs'" "$ROOT/scripts/build-buildroot.sh"
 grep -Fq -- "-C \"\$SOURCE_DIR/staging_dir/host\" bin/usign" "$ROOT/scripts/build-buildroot.sh"
+grep -Fq 'package/utils/ucode/host/compile' "$ROOT/scripts/build-buildroot.sh"
+grep -Fq 'staging_dir/hostpkg/bin/ucode' "$ROOT/scripts/build-buildroot.sh"
+grep -Fq -- '-cdynlink=uci' "$ROOT/scripts/build-buildroot.sh"
+grep -Fq -- '-cdynlink=luci.core' "$ROOT/scripts/build-buildroot.sh"
+grep -Fq "\"\$UCODE_BIN\" -T -c" "$ROOT/scripts/build-buildroot.sh"
 if grep -Fq 'bin/.usign.bin' "$ROOT/scripts/build-buildroot.sh"; then
 	echo 'compile bundle must not assume an optional .usign.bin wrapper' >&2
 	exit 1

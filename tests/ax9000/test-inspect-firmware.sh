@@ -83,10 +83,17 @@ usr/share/company/CUSTOM-COMPONENTS.manifest
 usr/share/company/sqm-mobile-template
 www/luci-static/resources/view/company/dashboard.js
 www/luci-static/resources/view/company/setup.js
-www/luci-static/company/cascade.css
-www/luci-static/company/logo.svg
-usr/share/ucode/luci/template/themes/company/header.ut
-usr/share/ucode/luci/template/themes/company/footer.ut'
+www/luci-static/liquid/cascade.css
+www/luci-static/liquid/main.js
+www/luci-static/liquid/logo.svg
+www/luci-static/resources/menu-liquid.js
+www/luci-static/resources/view/liquid/sysauth.js
+usr/share/ucode/luci/template/themes/liquid/header.ut
+usr/share/ucode/luci/template/themes/liquid/footer.ut
+usr/share/ucode/luci/template/themes/liquid/sysauth.ut
+usr/share/licenses/luci-theme-liquid/LICENSE
+usr/share/rpcd/ucode/luci-theme-liquid
+usr/share/rpcd/acl.d/luci-theme-liquid.json'
 printf '%s\n' "$required_paths" | while IFS= read -r path; do
 	mkdir -p "$FIXTURE_ROOT/$(dirname "$path")"
 	: > "$FIXTURE_ROOT/$path"
@@ -96,6 +103,9 @@ cp "$ROOT/VERSION" "$FIXTURE_ROOT/etc/companywrt/VERSION"
 cp "$ROOT/devices/ax9000/darkyun-large-ubi.json" "$FIXTURE_ROOT/etc/companywrt/device-layout.json"
 cp "$ROOT/keys/companywrt-release.pub" "$FIXTURE_ROOT/etc/companywrt/keys/release.pub"
 cp "$ROOT/CUSTOM-COMPONENTS.manifest" "$FIXTURE_ROOT/usr/share/company/CUSTOM-COMPONENTS.manifest"
+printf '%s\n' '胖胖龙专用路由器' > "$FIXTURE_ROOT/usr/share/ucode/luci/template/themes/liquid/header.ut"
+printf '%s\n' '胖胖龙专用路由器' > "$FIXTURE_ROOT/www/luci-static/resources/view/company/dashboard.js"
+printf '%s\n' 'safe Liquid preferences' > "$FIXTURE_ROOT/www/luci-static/liquid/main.js"
 cat > "$FIXTURE_ROOT/etc/companywrt/build.conf" <<'EOF'
 PROFILE=xiaomi_ax9000_darkyun
 BOARD=xiaomi,ax9000-darkyun
@@ -109,7 +119,7 @@ daemon:*:20000:0:99999:7:::
 EOF
 cat > "$FIXTURE_ROOT/etc/uci-defaults/99-companywrt" <<'EOF'
 uci set uhttpd.main.redirect_https='1'
-uci set luci.main.mediaurlbase='/luci-static/company'
+uci set luci.main.mediaurlbase='/luci-static/liquid'
 EOF
 cat > "$FIXTURE_ROOT/etc/config/firewall" <<'EOF'
 config zone
@@ -152,6 +162,7 @@ logd - 1-r1
 luci-app-pbr - 1-r1
 luci-proto-wireguard - 1-r1
 luci-ssl-openssl - 1-r1
+luci-theme-liquid - 0.3.1-r1
 pbr - 1-r1
 usign - 1-r1
 wireguard-tools - 1-r1
@@ -176,6 +187,9 @@ grep -qx 'openclash_preinstalled=NO' "$TMP/locked.report"
 grep -qx 'mihomo_preinstalled=NO' "$TMP/locked.report"
 grep -qx 'collectd_preinstalled=NO' "$TMP/locked.report"
 grep -qx 'memory_metric=MEMAVAILABLE' "$TMP/locked.report"
+grep -qx 'liquid_theme_compiled=PASS' "$TMP/locked.report"
+grep -qx 'liquid_external_wallpaper=REMOVED' "$TMP/locked.report"
+grep -qx 'product_name=胖胖龙专用路由器' "$TMP/locked.report"
 
 printf 'luci-app-openclash - 0.47.0-r1\n' >> "$TMP/PACKAGE-MANIFEST"
 if PATH="$MOCK:$PATH" UNSQUASHFS="$MOCK/unsquashfs" DUMPIMAGE="$MOCK/dumpimage" DTC="$MOCK/dtc" "$ROOT/scripts/inspect-firmware.sh" \

@@ -14,7 +14,7 @@ SOURCE_COMMIT=${COMPANYWRT_SOURCE_COMMIT:-$(git -C "$ROOT" rev-parse HEAD)}
 printf '%s\n' "$SOURCE_COMMIT" | grep -Eq '^[0-9a-f]{40}$' || { echo 'invalid source commit' >&2; exit 1; }
 [ "$(git -C "$ROOT" rev-parse HEAD)" = "$SOURCE_COMMIT" ] || { echo 'source commit does not match repository HEAD' >&2; exit 1; }
 [ -z "$(git -C "$ROOT" status --porcelain --untracked-files=all)" ] || { echo 'refusing a dirty worktree container build' >&2; exit 1; }
-ignored_inputs=$(git -C "$ROOT" ls-files --others --ignored --exclude-standard -- configs/overlay packages/luci-app-company/root packages/luci-theme-company/root | grep -v '/\.DS_Store$' || true)
+ignored_inputs=$(git -C "$ROOT" ls-files --others --ignored --exclude-standard -- configs/overlay packages/luci-app-company/root packages/luci-theme-liquid | grep -v '/\.DS_Store$' || true)
 [ -z "$ignored_inputs" ] || { echo 'ignored files exist in firmware input directories; refusing possible secret leakage' >&2; exit 1; }
 case " $* " in *' --compile-only '*) ;; *) echo 'container compiler requires --compile-only; sign the verified bundle separately' >&2; exit 1 ;; esac
 docker volume create "$VOLUME" >/dev/null

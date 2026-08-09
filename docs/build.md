@@ -15,7 +15,7 @@ RC3 及后续版本只使用当前 key 主签。私钥路径必须在仓库外�
 ```sh
 USIGN_SECRET_KEY_FILE=/secure/companywrt-usign-current.key \
   ./scripts/sign-release-bundle.sh \
-    --input artifacts/preflight/25.12.5-company.2-rc4 --channel rc
+    --input artifacts/preflight/25.12.5-company.2-rc5 --channel rc
 ```
 
 原生 Linux x86_64 可直接运行 `build-buildroot.sh`。Apple Silicon 使用容器脚本；
@@ -29,7 +29,7 @@ USIGN_SECRET_KEY_FILE=/secure/companywrt-usign-current.key \
 该目录含 `COMPILE-ONLY-NOT-A-RELEASE.txt`，绝不能刷机或发布。正式默认目录为：
 
 ```text
-artifacts/rc/25.12.5-company.2-rc4/
+artifacts/rc/25.12.5-company.2-rc5/
 artifacts/beta/25.12.5-company.2-beta1/  # 仅 -betaN VERSION 的显式 beta 构建
 ```
 
@@ -50,7 +50,7 @@ artifacts/beta/25.12.5-company.2-beta1/  # 仅 -betaN VERSION 的显式 beta 构
    首启 overlay 不含默认密码或 WAN ACCEPT；
    检查器使用同一固定 Buildroot 生成的唯一 host `dumpimage`、`dtc`、`unsquashfs` 读取内核
    FIT/DTB/rootfs，不依赖宿主机同名工具；
-6. 暗云大分区目标固定的 213 个唯一 PACKAGE-MANIFEST 包与 CycloneDX 上游组件一一映射；其中包含由
+6. 暗云大分区目标固定的 214 个唯一 PACKAGE-MANIFEST 包与 CycloneDX 上游组件一一映射；其中包含由
    `CONFIG_LUCI_LANG_zh_Hans` 生成的 Base、PBR、防火墙和软件包管理器中文包；缺失组件补成
    `NOASSERTION`，custom overlay 进入 CUSTOM-COMPONENTS、NOTICE 和 MIT LICENSE；
 7. 无密钥编译目录先以 SHA256SUMS 封存；隔离签名 job 重新绑定 commit/内容报告/真机
@@ -59,10 +59,11 @@ artifacts/beta/25.12.5-company.2-beta1/  # 仅 -betaN VERSION 的显式 beta 构
 8. 私钥与公钥指纹一致后签署 RELEASE-MANIFEST，并用公钥回验；
 9. 所有 release 文件生成 SHA256SUMS 并立即回验。
 
-`packages/luci-*-company/Makefile` 是未来官方 SDK 打包入口。本项目当前没有把它们
-编译成 APK；Buildroot `files/` 直接复制 `root/` 树，因此 SBOM 名称为
-`luci-*-company-overlay`。切换为 SDK APK 前须新增独立、固定 SDK 构建链和 APK
-签名/安装测试，不能把 overlay 冒充包。
+固定 commit 的 `packages/luci-theme-liquid` 被放入 Buildroot package tree 并编译成真实
+`luci-theme-liquid` APK；其包名、版本和许可证同时进入 PACKAGE-MANIFEST 与 SBOM。
+`luci-app-company` 目前仍由 Buildroot `files/` 复制 `root/`，因此诚实命名为
+`luci-app-company-overlay`。把应用切换为 SDK/APK 前须新增独立、固定构建链和安装测试，
+不能把 overlay 冒充包。
 
 ## CI 权限与发布
 

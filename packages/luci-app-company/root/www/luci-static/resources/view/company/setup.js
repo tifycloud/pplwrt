@@ -38,7 +38,7 @@ return view.extend({
 			username: uci.get('network', 'wan', 'username') || '',
 			wanPassword: '',
 			enableWifi: true,
-			ssid: 'CompanyWrt-Office',
+			ssid: '胖胖龙',
 			wifiPassword: '',
 			adminPassword: '',
 			adminConfirm: ''
@@ -48,8 +48,8 @@ return view.extend({
 		this.progress = E('div', { class: 'cw-steps', 'aria-label': '设置进度' });
 		this.root = E('div', { class: 'cw-wizard' }, [
 			E('header', { class: 'cw-wizard-head' }, [
-				E('p', { class: 'cw-eyebrow' }, 'FIRST RUN · 约 3 分钟'),
-				E('h1', {}, '把路由器真正设置好'),
+				E('p', { class: 'cw-eyebrow' }, '胖胖龙专用路由器 · 首次设置'),
+				E('h1', {}, '用 4 步完成基础联网'),
 				E('p', {}, '依次完成联网、Wi‑Fi 和管理员密码。宽带密码只保存在这台路由器中。'),
 				this.progress
 			]),

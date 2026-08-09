@@ -13,7 +13,7 @@ SIGNING_KEY=${USIGN_SECRET_KEY_FILE:-}
 CURRENT_SIGNING_KEY=${USIGN_CURRENT_SECRET_KEY_FILE:-}
 RELEASE_BASE_URL=""
 VERSION=$(sed -n '1p' "$ROOT/VERSION")
-EXPECTED_PACKAGE_COUNT=213
+EXPECTED_PACKAGE_COUNT=214
 
 usage() {
 	cat <<'EOF'
@@ -227,7 +227,7 @@ fi
 	printf 'package_count=%s\n' "$EXPECTED_PACKAGE_COUNT"
 	printf 'manifest_usign_key_id=%s\nembedded_usign_key_id=%s\n' "$MANIFEST_PUBLIC_KEY_ID" "$EMBEDDED_PUBLIC_KEY_ID"
 	if [ "$KEY_TRANSITION" -eq 1 ]; then printf 'key_rotation=PREVIOUS_PRIMARY_CURRENT_COSIGN_EMBED_CURRENT\n'; else printf 'key_rotation=NONE\n'; fi
-	printf 'custom_components=overlay-not-apk\nhardware_validation=%s\n' "$HARDWARE_VALIDATION"
+	printf 'custom_components=mixed-apk-and-overlay\nhardware_validation=%s\n' "$HARDWARE_VALIDATION"
 	printf 'production_gate_sha256=%s\nhardware_evidence_id=%s\nserial_evidence_id=%s\ntested_firmware_sha256=%s\n' \
 		"$PRODUCTION_GATE_SHA256" "$HARDWARE_EVIDENCE_ID" "$SERIAL_EVIDENCE_ID" "$TESTED_FIRMWARE_SHA256"
 } > "$OUTPUT_WORK/BUILD-METADATA"

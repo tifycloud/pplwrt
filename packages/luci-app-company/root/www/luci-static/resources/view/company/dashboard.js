@@ -69,8 +69,9 @@ return view.extend({
 
 		return E('div', { class: 'cw-page' }, [
 			E('section', { class: 'cw-hero' }, [
-				E('p', { class: 'cw-eyebrow' }, 'AX9000 · 网络控制中心'),
-				E('h1', {}, '早上好，网络状态一眼看清'),
+				E('p', { class: 'cw-eyebrow' }, 'XIAOMI AX9000 · COMPANYWRT'),
+				E('h1', {}, '胖胖龙专用路由器'),
+				E('h2', { class: 'cw-hero-subtitle' }, '网络状态，一眼看清'),
 				E('p', {}, '先处理联网和无线，再进入 VLAN、PBR 与远程管理。这里显示实际可用内存，不把可回收缓存算成应用占用。'),
 				E('div', { class: 'cw-actions' }, [
 					E('a', { class: 'cw-action', href: L.url('admin', 'company', 'setup') }, '重新运行设置向导'),

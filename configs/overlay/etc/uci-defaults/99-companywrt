@@ -3,8 +3,9 @@
 # Safe first-boot defaults. The guided setup owns only administrator password,
 # the primary WAN and basic Wi-Fi. The official theme remains as rescue.
 uci -q set system.@system[0].hostname='companywrt-ax9000'
+uci -q set system.@system[0].description='胖胖龙专用路由器'
 uci -q set luci.main.lang='zh_cn'
-uci -q set luci.main.mediaurlbase='/luci-static/company'
+uci -q set luci.main.mediaurlbase='/luci-static/liquid'
 uci -q set uhttpd.main.redirect_https='1'
 
 channel=$(awk -F= '$1 == "CHANNEL" { print $2; exit }' /etc/companywrt/build.conf 2>/dev/null)

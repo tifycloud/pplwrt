@@ -1,0 +1,42 @@
+// CompanyWrt authenticated Liquid preference writer.
+// SPDX-License-Identifier: MIT
+
+'use strict';
+
+import { cursor } from 'uci';
+
+const methods = {
+	setPreferences: {
+		args: {
+			mode: 'auto',
+			accent: 'custom',
+			accent_custom: '#1f7a75'
+		},
+		call: function(request) {
+			let mode = request.args.mode;
+			let accent = request.args.accent;
+			let custom = request.args.accent_custom;
+
+			if (type(mode) != 'string' || !match(mode, /^(light|dark|auto)$/))
+				return { result: false, error: 'invalid mode' };
+			if (type(accent) != 'string' || !match(accent, /^(blue|magenta|amber|purple|lime|custom)$/))
+				return { result: false, error: 'invalid accent' };
+			if (type(custom) != 'string' || !match(custom, /^#[0-9a-fA-F]{6}$/))
+				return { result: false, error: 'invalid custom accent' };
+
+			let uci = cursor();
+			if (!uci.get('liquid', 'theme'))
+				uci.set('liquid', 'theme', 'theme');
+			uci.set('liquid', 'theme', 'mode', mode);
+			uci.set('liquid', 'theme', 'accent', accent);
+			uci.set('liquid', 'theme', 'accent_custom', lc(custom));
+
+			if (!uci.commit())
+				return { result: false, error: 'commit failed' };
+
+			return { result: true };
+		}
+	}
+};
+
+return { 'luci-theme-liquid': methods };

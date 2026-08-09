@@ -23,6 +23,7 @@ libnghttp2-14 - 1.66.0-r1
 EOF
 cat > "$TMP/CUSTOM-COMPONENTS.manifest" <<'EOF'
 company-test-overlay | 25.12.5-company.2-rc2 | MIT | overlay | tests/fixture
+company-test-apk-patch | 0.3.1-r1 | GPL-3.0-only | Source patch compiled into luci-theme-liquid APK | tests/theme
 EOF
 
 python3 "$ROOT/scripts/augment-sbom.py" \
@@ -42,6 +43,9 @@ jq -e '.components[] | select(.name == "libnghttp2") |
 jq -e '.metadata.properties[] | select(.name == "companywrt:package-manifest-coverage" and .value == "COMPLETE_ONE_TO_ONE:3")' \
 	"$TMP/sbom.json" >/dev/null
 jq -e '.components[] | select(.name == "company-test-overlay")' "$TMP/sbom.json" >/dev/null
+jq -e '.components[] | select(.name == "company-test-apk-patch") |
+  any(.properties[]; .name == "companywrt:packaging-claim" and .value == "source-patch-compiled-into-apk")' \
+	"$TMP/sbom.json" >/dev/null
 
 if python3 "$ROOT/scripts/augment-sbom.py" \
 	--sbom "$TMP/sbom.json" \
